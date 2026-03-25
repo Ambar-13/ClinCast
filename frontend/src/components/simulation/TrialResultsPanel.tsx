@@ -40,7 +40,7 @@ function toRows(snaps: RoundSnapshot[]): ChartRow[] {
 // ── Shared chart wrapper ──────────────────────────────────────────────────────
 
 const TOOLTIP_STYLE = {
-  background: "var(--cream-100)",
+  background: "var(--surface-100)",
   border:     "1px solid var(--border-warm)",
   borderRadius: 10,
   fontSize:   11,
@@ -179,11 +179,11 @@ function ProvenanceStrip({ result }: { result: SimulateResponse }) {
 function ShiftBar({ p10, p50, p90, mean, max }: { p10: number; p50: number; p90: number; mean: number; max: number }) {
   const scale = (v: number) => ((v + max) / (2 * max)) * 100;
   return (
-    <div className="relative h-5 rounded-full overflow-hidden" style={{ background: "var(--cream-300)" }}>
+    <div className="relative h-5 rounded-full overflow-hidden" style={{ background: "var(--surface-200)" }}>
       <div className="absolute top-0 bottom-0 rounded-full"
-        style={{ left: `${scale(p10)}%`, width: `${scale(p90) - scale(p10)}%`, background: "rgba(139,26,26,0.15)" }} />
+        style={{ left: `${scale(p10)}%`, width: `${scale(p90) - scale(p10)}%`, background: "rgba(7,160,195,0.15)" }} />
       <div className="absolute top-1 bottom-1 w-0.5 rounded-full"
-        style={{ left: `${scale(p50)}%`, background: "var(--crimson-700)" }} />
+        style={{ left: `${scale(p50)}%`, background: "var(--primary-700)" }} />
       <div className="absolute top-1.5 bottom-1.5 w-1.5 rounded-full"
         style={{ left: `calc(${scale(mean)}% - 3px)`, background: "var(--ink-700)" }} />
       <div className="absolute top-0 bottom-0 w-px opacity-30"
@@ -198,7 +198,7 @@ function ShiftBar({ p10, p50, p90, mean, max }: { p10: number; p50: number; p90:
 const QUADRANT = {
   pp: { color: "#16a34a", bg: "rgba(22,163,74,0.08)",  label: "Optimistic & engaged"  },
   np: { color: "#2563eb", bg: "rgba(37,99,235,0.08)",  label: "Motivated skeptic"      },
-  pn: { color: "#d97706", bg: "rgba(217,119,6,0.08)",  label: "Trusting but fatigued"  },
+  pn: { color: "#0369a1", bg: "rgba(3,105,161,0.08)",  label: "Trusting but fatigued"  },
   nn: { color: "#dc2626", bg: "rgba(220,38,38,0.08)",  label: "Skeptical & disengaged" },
 };
 
@@ -251,7 +251,7 @@ function SwarmScatter({ votes, totalAgents }: { votes: SwarmMetadata["votes"]; t
     const fmt = (v: number) => `${v >= 0 ? "+" : ""}${v.toFixed(1)}%`;
     return (
       <div className="rounded-xl border p-3 max-w-[280px] text-[11px] shadow-lg"
-        style={{ background: "var(--cream-100)", borderColor: "var(--border-warm)", color: "var(--ink-700)" }}>
+        style={{ background: "var(--surface-100)", borderColor: "var(--border-warm)", color: "var(--ink-700)" }}>
         <div className="flex items-center gap-1.5 mb-2">
           <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: q.color }} />
           <span className="font-semibold text-[10px] uppercase tracking-wider" style={{ color: q.color }}>{q.label}</span>
@@ -269,7 +269,7 @@ function SwarmScatter({ votes, totalAgents }: { votes: SwarmMetadata["votes"]; t
   };
 
   return (
-    <div className="rounded-xl border overflow-hidden" style={{ background: "var(--cream-200)", borderColor: "var(--border-warm)" }}>
+    <div className="rounded-xl border overflow-hidden" style={{ background: "var(--surface-100)", borderColor: "var(--border-warm)" }}>
       <div className="px-4 pt-3 pb-1 flex items-center justify-between">
         <p className="kicker text-[10px]">Agent Decision Map <span className="normal-case font-normal" style={{ color: "var(--ink-400)" }}>({n.toLocaleString()} of {totalAgents.toLocaleString()} agents)</span></p>
         <p className="text-[10px]" style={{ color: "var(--ink-400)" }}>Hover for persona + reasoning</p>
@@ -337,7 +337,7 @@ function SwarmPanel({ meta }: { meta: SwarmMetadata }) {
         <div className="flex items-center gap-2">
           <p className="kicker text-[10px]">Swarm Elicitation</p>
           <span className="rounded-full px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-widest"
-            style={{ background: "rgba(245,158,11,0.12)", color: "#b45309", border: "1px solid rgba(245,158,11,0.25)" }}>
+            style={{ background: "rgba(7,160,195,0.10)", color: "var(--primary-700)", border: "1px solid rgba(7,160,195,0.25)" }}>
             SWARM-ELICITED
           </span>
         </div>
@@ -353,7 +353,7 @@ function SwarmPanel({ meta }: { meta: SwarmMetadata }) {
           { label: "Belief Shift",    mean: meta.belief_shift,    std: meta.belief_std,    p10: meta.belief_p10,    p50: meta.belief_p50,    p90: meta.belief_p90,    max: 0.15 },
           { label: "Adherence Shift", mean: meta.adherence_shift, std: meta.adherence_std, p10: meta.adherence_p10, p50: meta.adherence_p50, p90: meta.adherence_p90, max: 0.10 },
         ].map(({ label, mean, std, p10, p50, p90, max }) => (
-          <div key={label} className="rounded-xl border p-3" style={{ background: "var(--cream-200)", borderColor: "var(--border-warm)" }}>
+          <div key={label} className="rounded-xl border p-3" style={{ background: "var(--surface-100)", borderColor: "var(--border-warm)" }}>
             <p className="kicker text-[10px] mb-2">{label}</p>
             <p className="metric-num text-xl font-bold mb-1" style={{ color: mean >= 0 ? "var(--success)" : "var(--danger)" }}>
               {fmt(mean)}
@@ -381,7 +381,7 @@ function SwarmPanel({ meta }: { meta: SwarmMetadata }) {
               const q  = QUADRANT[qk];
               return (
                 <div key={i} className="rounded-xl border p-3"
-                  style={{ borderColor: "var(--border-warm)", background: "var(--cream-100)" }}>
+                  style={{ borderColor: "var(--border-warm)", background: "var(--surface-50)" }}>
                   {/* Header row */}
                   <div className="flex items-start justify-between gap-3 mb-2">
                     <div className="flex items-start gap-2 min-w-0">
@@ -525,7 +525,7 @@ export function TrialResultsPanel({ result }: Props) {
         <KpiCard label="Dropout (enrolled)" value={dropoutPct} color="var(--danger)"   sub="fraction discontinued" />
         <KpiCard label="Mean Adherence" value={adherencePct} color="var(--success)" sub="enrollment-weighted" />
         <KpiCard label="Safety Signal"      value={safetyPct}  color="var(--warning)"  />
-        <KpiCard label="Data Quality"       value={dqPct}      color="var(--crimson-700)" />
+        <KpiCard label="Data Quality"       value={dqPct}      color="var(--primary-700)" />
       </div>
 
       {/* Charts */}
@@ -543,7 +543,7 @@ export function TrialResultsPanel({ result }: Props) {
             sublabel="Protocol adherence over trial duration"
             lines={[
               { key: "adherence",       color: "var(--success)",      name: "Adherence" },
-              { key: "visitCompliance", color: "var(--crimson-700)", name: "Visit Compliance" },
+              { key: "visitCompliance", color: "var(--primary-600)", name: "Visit Compliance" },
             ]}
           />
           <MetricChart

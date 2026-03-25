@@ -89,10 +89,10 @@ export function ProtocolUpload({ onApply, openaiApiKey }: Props) {
       <div className="px-4 py-3 flex items-center justify-between"
         style={{ borderBottom: file || result ? "1px solid var(--border-warm)" : undefined }}>
         <div className="flex items-center gap-2">
-          <FileText size={12} style={{ color: "var(--crimson-700)" }} />
+          <FileText size={12} style={{ color: "var(--primary-600)" }} />
           <p className="kicker text-[10px]">Document Auto-fill</p>
           <span className="rounded-full px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-widest"
-            style={{ background: "rgba(139,26,26,0.08)", color: "var(--crimson-700)", border: "1px solid rgba(139,26,26,0.15)" }}>
+            style={{ background: "rgba(7,160,195,0.08)", color: "var(--primary-700)", border: "1px solid rgba(7,160,195,0.15)" }}>
             AI
           </span>
         </div>
@@ -113,11 +113,11 @@ export function ProtocolUpload({ onApply, openaiApiKey }: Props) {
             onClick={() => inputRef.current?.click()}
             className="flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed py-6 cursor-pointer transition-colors"
             style={{
-              borderColor: dragging ? "var(--crimson-700)" : "var(--cream-400)",
-              background: dragging ? "rgba(139,26,26,0.04)" : "var(--cream-200)",
+              borderColor: dragging ? "var(--primary-600)" : "var(--border-warm)",
+              background: dragging ? "rgba(7,160,195,0.04)" : "var(--surface-100)",
             }}
           >
-            <Upload size={20} style={{ color: dragging ? "var(--crimson-700)" : "var(--ink-300)" }} />
+            <Upload size={20} style={{ color: dragging ? "var(--primary-600)" : "var(--ink-300)" }} />
             <p className="text-xs font-medium" style={{ color: "var(--ink-600)" }}>
               Drop any document
             </p>
@@ -136,8 +136,8 @@ export function ProtocolUpload({ onApply, openaiApiKey }: Props) {
         {file && !result && !loading && (
           <div className="space-y-3">
             <div className="flex items-center gap-2.5 rounded-lg border px-3 py-2"
-              style={{ borderColor: "var(--border-warm)", background: "var(--cream-100)" }}>
-              <FileText size={14} style={{ color: "var(--crimson-700)", flexShrink: 0 }} />
+              style={{ borderColor: "var(--border-warm)", background: "var(--surface-50)" }}>
+              <FileText size={14} style={{ color: "var(--primary-600)", flexShrink: 0 }} />
               <div className="min-w-0 flex-1">
                 <p className="text-xs font-medium truncate" style={{ color: "var(--ink-700)" }}>{file.name}</p>
                 <p className="text-[10px]" style={{ color: "var(--ink-400)" }}>
@@ -184,7 +184,7 @@ export function ProtocolUpload({ onApply, openaiApiKey }: Props) {
                 </p>
                 <div className="flex items-center gap-1.5 mt-0.5">
                   <span className="text-[9px] font-bold uppercase tracking-widest rounded-full px-1.5 py-0.5"
-                    style={{ background: "rgba(139,26,26,0.08)", color: "var(--crimson-700)", border: "1px solid rgba(139,26,26,0.15)" }}>
+                    style={{ background: "rgba(7,160,195,0.08)", color: "var(--primary-700)", border: "1px solid rgba(7,160,195,0.15)" }}>
                     {result.document_type || "Document"}
                   </span>
                   <span className="text-[10px]" style={{ color: "var(--ink-400)" }}>
@@ -196,7 +196,7 @@ export function ProtocolUpload({ onApply, openaiApiKey }: Props) {
 
             {/* AI Summary */}
             {result.summary && (
-              <div className="rounded-lg px-3 py-2" style={{ background: "var(--cream-200)", border: "1px solid var(--border-warm)" }}>
+              <div className="rounded-lg px-3 py-2" style={{ background: "var(--surface-100)", border: "1px solid var(--border-warm)" }}>
                 <p className="text-[10px] leading-4" style={{ color: "var(--ink-600)" }}>
                   <span className="font-semibold" style={{ color: "var(--ink-700)" }}>What this is: </span>
                   {result.summary}
@@ -210,15 +210,15 @@ export function ProtocolUpload({ onApply, openaiApiKey }: Props) {
                 const src = result.field_sources?.[k] ?? (result.assumed_fields.includes(k) ? "default" : "explicit");
                 const reasoning = result.field_reasoning?.[k];
                 return (
-                  <div key={k} className="px-3 py-1.5" style={{ background: "var(--cream-100)" }}>
+                  <div key={k} className="px-3 py-1.5" style={{ background: "var(--surface-50)" }}>
                     <div className="flex items-center justify-between">
                       <span className="text-[10px]" style={{ color: "var(--ink-500)" }}>{FIELD_LABELS[k]}</span>
                       <div className="flex items-center gap-1.5">
                         {/* Source badge */}
                         <span className="text-[9px] font-medium flex items-center gap-0.5"
-                          style={{ color: src === "explicit" ? "#16a34a" : src === "inferred" ? "#b45309" : "var(--ink-300)" }}>
+                          style={{ color: src === "explicit" ? "#16a34a" : src === "inferred" ? "var(--primary-700)" : "var(--ink-300)" }}>
                           <span className="inline-block w-1.5 h-1.5 rounded-full"
-                            style={{ background: src === "explicit" ? "#16a34a" : src === "inferred" ? "#d97706" : "var(--ink-300)" }} />
+                            style={{ background: src === "explicit" ? "#16a34a" : src === "inferred" ? "var(--primary-600)" : "var(--ink-300)" }} />
                           {src === "explicit" ? "from doc" : src === "inferred" ? "AI inferred" : "assumed"}
                         </span>
                         <span className="text-[10px] font-semibold font-mono" style={{ color: "var(--ink-800)" }}>

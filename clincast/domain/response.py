@@ -459,8 +459,9 @@ def adherence_probability(
         provided, splits the belief modifier into fast (belief) and slow
         (institutional_trust) components.
       - Conscientiousness: higher C → higher adherence execution.
-        Bogg & Roberts (2004) Psych Bull meta: r=0.20 for C→health behaviors.
-        Coefficient deflated (0.15) from bivariate r to account for archetype overlap.
+        Molloy et al. (2014) Annals Behav Med meta (16 studies, N=3476): r=0.149 for
+        C→medication adherence. Coefficient 0.08 = r × 0.5 archetype-overlap discount
+        (archetypes absorb ~50% of C's predictive variance via behavioral descriptors).
         [GROUNDED direction; coefficient magnitude DIRECTIONAL]
       - Neuroticism: higher N → lower adherence.
         West Sweden Heart Failure Registry (PMC3065484): multivariate β=-0.029 (N→adherence).
@@ -469,9 +470,10 @@ def adherence_probability(
         for archetype overlap with TREATMENT_NAIVE_HIGH_ANXIETY.
         [GROUNDED direction; coefficient magnitude DIRECTIONAL]
       - Personal Control (IPQ-R): higher PC → higher adherence.
-        Hagger & Orbell (2003) meta: r=0.21 for IPQ-R PC→coping/adaptation.
-        Coefficient 0.08 deflated due to C/PC correlation (r≈0.25-0.30).
-        [GROUNDED direction; coefficient magnitude DIRECTIONAL]
+        Brandes & Mullan (2014) Health Psych Rev meta (30 CSM studies): r=0.12 for
+        PC→adherence (r=0.21 in Hagger & Orbell 2003 is coping/adaptation, not adherence).
+        Coefficient 0.06 = r × 0.5 archetype-overlap discount; further discounted for
+        C/PC correlation (r≈0.20-0.30). [GROUNDED direction; coefficient magnitude DIRECTIONAL]
 
     Returns adherence_prob array of shape (n_patients,), values in [0, 1].
     """
@@ -520,12 +522,12 @@ def adherence_probability(
     # Coefficients are deflated from bivariate r-values to account for archetype
     # baseline already absorbing mean-level personality differences per archetype.
     if conscientiousness is not None or neuroticism is not None or personal_control is not None:
-        c_effect  = 0.15 * ((conscientiousness  - 0.5) if conscientiousness  is not None else np.zeros_like(base))
+        c_effect  = 0.08 * ((conscientiousness  - 0.5) if conscientiousness  is not None else np.zeros_like(base))
         n_effect  = 0.05 * ((neuroticism        - 0.5) if neuroticism        is not None else np.zeros_like(base))
-        pc_effect = 0.08 * ((personal_control   - 0.5) if personal_control   is not None else np.zeros_like(base))
-        # C: Bogg & Roberts 2004 meta [GROUNDED direction; DIRECTIONAL magnitude]
-        # N: West Sweden PMC3065484 multivariate β=-0.029; β_N=0.05 deflated [DIRECTIONAL magnitude]
-        # PC: Hagger & Orbell 2003 meta r=0.21 [GROUNDED direction; DIRECTIONAL magnitude]
+        pc_effect = 0.06 * ((personal_control   - 0.5) if personal_control   is not None else np.zeros_like(base))
+        # C: Molloy 2014 r=0.149, ×0.5 archetype overlap → 0.08 [DIRECTIONAL magnitude]
+        # N: West Sweden PMC3065484 multivariate β=-0.029; 0.05 deflated [DIRECTIONAL magnitude]
+        # PC: Brandes & Mullan 2014 r=0.12, ×0.5 overlap → 0.06 [DIRECTIONAL magnitude]
         personality_modifier = np.clip(1.0 + c_effect - n_effect + pc_effect, 0.7, 1.3)
         base *= personality_modifier
 

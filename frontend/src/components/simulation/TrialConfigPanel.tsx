@@ -57,14 +57,14 @@ function SliderField({
     <div>
       <div className="flex items-center justify-between mb-1">
         <Label>{label}</Label>
-        <span className="text-xs font-semibold font-mono" style={{ color: "var(--crimson-700)" }}>
+        <span className="text-xs font-semibold font-mono" style={{ color: "var(--primary-700)" }}>
           {format(value)}
         </span>
       </div>
       <input
         type="range" min={min} max={max} step={step} value={value}
         onChange={(e) => onChange(parseFloat(e.target.value))}
-        className="w-full accent-[var(--crimson-700)] h-1.5 cursor-pointer"
+        className="w-full accent-[var(--primary-700)] h-1.5 cursor-pointer"
       />
       {hint && <Hint>{hint}</Hint>}
     </div>
@@ -124,7 +124,7 @@ function Toggle({
       <div className="relative mt-0.5 flex-shrink-0">
         <input type="checkbox" checked={checked} onChange={(e) => onChange(e.target.checked)} className="peer sr-only" />
         <div className="h-4 w-8 rounded-full transition-colors"
-          style={{ background: checked ? "var(--crimson-700)" : "var(--cream-400)" }} />
+          style={{ background: checked ? "var(--primary-700)" : "var(--surface-200)" }} />
         <div className="absolute top-0.5 h-3 w-3 rounded-full bg-white shadow transition-transform"
           style={{ left: "2px", transform: checked ? "translateX(16px)" : "translateX(0)" }} />
       </div>
@@ -140,7 +140,7 @@ function Toggle({
 
 function confidenceColor(c: string): { bg: string; text: string; border: string } {
   if (c === "high")   return { bg: "rgba(22,163,74,0.10)",   text: "#16a34a", border: "rgba(22,163,74,0.25)" };
-  if (c === "medium") return { bg: "rgba(217,119,6,0.10)",   text: "#d97706", border: "rgba(217,119,6,0.25)" };
+  if (c === "medium") return { bg: "rgba(7,160,195,0.08)",   text: "var(--primary-700)", border: "rgba(7,160,195,0.22)" };
   return               { bg: "rgba(220,38,38,0.10)",   text: "#dc2626", border: "rgba(220,38,38,0.25)" };
 }
 
@@ -199,7 +199,7 @@ function NctLookup({ onApply }: { onApply: (fields: Partial<SimulateRequest>) =>
         className="flex w-full items-center justify-between text-left"
       >
         <div className="flex items-center gap-2">
-          <Search size={12} style={{ color: "var(--crimson-700)" }} />
+          <Search size={12} style={{ color: "var(--primary-600)" }} />
           <span className="text-[11px] font-semibold" style={{ color: "var(--ink-700)" }}>
             Auto-fill from ClinicalTrials.gov
           </span>
@@ -245,7 +245,7 @@ function NctLookup({ onApply }: { onApply: (fields: Partial<SimulateRequest>) =>
 
           {result && conf && (
             <div className="rounded-lg px-3 py-2.5 space-y-2"
-              style={{ background: "var(--cream-100)", border: "1px solid var(--cream-300)" }}>
+              style={{ background: "var(--surface-50)", border: "1px solid var(--border-warm)" }}>
               {/* Title + clear */}
               <div className="flex items-start justify-between gap-2">
                 <div className="flex items-start gap-2 min-w-0">
@@ -287,7 +287,7 @@ function NctLookup({ onApply }: { onApply: (fields: Partial<SimulateRequest>) =>
                     <div className="mt-1.5 flex flex-wrap gap-1">
                       {result.assumed_fields.map((f) => (
                         <span key={f} className="rounded px-1.5 py-0.5 font-mono text-[9px]"
-                          style={{ background: "rgba(217,119,6,0.08)", color: "#d97706", border: "1px solid rgba(217,119,6,0.2)" }}>
+                          style={{ background: "rgba(7,160,195,0.07)", color: "var(--primary-700)", border: "1px solid rgba(7,160,195,0.18)" }}>
                           {f}
                         </span>
                       ))}
@@ -395,28 +395,28 @@ export function TrialConfigPanel({ value, onChange, label }: Props) {
       <NctLookup onApply={(patch) => onChange({ ...value, ...patch })} />
 
       {/* ── Policy narrative ─────────────────────────────────────────────── */}
-      <div className="mb-5 rounded-lg px-4 py-3" style={{ background: "var(--cream-100)", border: "1px solid var(--cream-300)" }}>
+      <div className="mb-5 rounded-lg px-4 py-3" style={{ background: "var(--surface-50)", border: "1px solid var(--border-warm)" }}>
         <p className="text-[11px] font-semibold uppercase tracking-wider mb-1" style={{ color: "var(--ink-400)" }}>POLICY INTERPRETATION</p>
         <p className="text-[13px] leading-relaxed" style={{ color: "var(--ink-700)" }}>{narrative}</p>
-        <div className="mt-3 pt-3 grid grid-cols-3 gap-2 text-center" style={{ borderTop: "1px solid var(--cream-300)" }}>
+        <div className="mt-3 pt-3 grid grid-cols-3 gap-2 text-center" style={{ borderTop: "1px solid var(--border-warm)" }}>
           {[
             { label: "Visits/mo", val: value.visits_per_month ?? 2,    lo: "0.5 = bimonthly\nTypical oncology follow-up", hi: "4 = weekly\nPhase 1 / intensive PK" },
             { label: "Visit hrs",  val: value.visit_duration_hours ?? 1.5, lo: "0.5h = quick check-in\nSelf-report / vitals only", hi: "6h+ = intensive\nIV infusion + PK draws" },
           ].map(({ label, val, lo, hi }) => (
-            <div key={label} className="rounded p-2" style={{ background: "var(--cream-200)" }}>
+            <div key={label} className="rounded p-2" style={{ background: "var(--surface-100)" }}>
               <p className="text-[10px] font-medium" style={{ color: "var(--ink-500)" }}>{label}</p>
               <p className="text-[15px] font-bold" style={{ color: "var(--ink-800)" }}>{val}</p>
               <p className="text-[10px] mt-0.5 whitespace-pre-line leading-tight" style={{ color: "var(--ink-400)" }}>{val <= (label === "Visits/mo" ? 1 : 1) ? lo : hi}</p>
             </div>
           ))}
-          <div className="rounded p-2" style={{ background: "var(--cream-200)" }}>
+          <div className="rounded p-2" style={{ background: "var(--surface-100)" }}>
             <p className="text-[10px] font-medium" style={{ color: "var(--ink-500)" }}>Burden tier</p>
             {(() => {
               const visits = value.visits_per_month ?? 2;
               const hrs    = value.visit_duration_hours ?? 1.5;
               const inv    = value.invasive_procedures && value.invasive_procedures !== "none";
               const score  = [visits >= 3, hrs >= 3, inv, value.ediary_frequency && value.ediary_frequency !== "none"].filter(Boolean).length;
-              const tier   = score >= 3 ? ["🔴", "HIGH", "#dc2626"] : score >= 1 ? ["🟡", "MEDIUM", "#d97706"] : ["🟢", "LOW", "#16a34a"];
+              const tier   = score >= 3 ? ["🔴", "HIGH", "#dc2626"] : score >= 1 ? ["🔵", "MEDIUM", "var(--primary-700)"] : ["🟢", "LOW", "#16a34a"];
               return <>
                 <p className="text-[18px]">{tier[0]}</p>
                 <p className="text-[11px] font-bold" style={{ color: tier[2] as string }}>{tier[1] as string}</p>

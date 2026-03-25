@@ -4,48 +4,53 @@
 
 :root {
   /* Surfaces */
-  --cream-50:   #FDFAF6;
-  --cream-100:  #FAF6EF;
-  --cream-200:  #F4EDE0;
-  --cream-300:  #E8DDD0;
-  --cream-400:  #D8CBBF;
+  --white:      #FFFFFF;
+  --surface-50: #FAFEFF;   /* nearly white, faintest teal hint */
+  --surface-100:#F2FAFC;   /* very light teal — card backgrounds */
+  --surface-200:#E4F4F9;   /* light teal — subtle separators, hover states */
 
-  /* Text — ink does the hierarchy work */
-  --ink-900:    #1A1208;
-  --ink-700:    #3D2E1E;
-  --ink-500:    #6B5744;
-  --ink-400:    #8C7B68;
-  --ink-300:    #A69485;
-  --ink-200:    #2B1E10;  /* migration compat — maps to primary text */
-  --ink-100:    #1A1208;  /* migration compat — maps to primary text (same as --ink-900) */
+  /* Text */
+  --ink-900:    #0A1628;
+  --ink-700:    #1A2E45;
+  --ink-500:    #4A6680;
+  --ink-400:    #6A87A0;
+  --ink-300:    #94AEBF;
+  --ink-200:    #0A1628;
+  --ink-100:    #0A1628;
 
-  /* Accent — crimson used SPARINGLY (buttons, active states, focus only) */
-  --crimson-700: #8B1A1A;
-  --crimson-600: #A82020;
-  --crimson-500: #C0392B;
-  --crimson-100: #FAE8E8;
-  --crimson-50:  #FDF4F4;
+  /* Primary — teal-blue, used for active states, buttons, focus */
+  --primary-700: #086788;
+  --primary-600: #07A0C3;
+  --primary-500: #1AB8DC;
+  --primary-100: #E0F4F9;
+  --primary-50:  #F0F9FC;
 
-  /* Semantic — carry meaning, used freely */
+  /* Accent — golden yellow for logo, highlights, badges */
+  --accent-500:  #FED766;
+  --accent-600:  #F5C842;
+  --accent-100:  #FFF8DC;
+  --accent-50:   #FFFDF0;
+
+  /* Semantic */
   --success:    #15803D;
-  --warning:    #B45309;
+  --warning:    #0369A1;
   --danger:     #DC2626;
 
-  /* Chart palette — warm but clearly distinct from each other */
-  --chart-compliance:  #8B1A1A;   /* deep crimson */
-  --chart-relocation:  #C2410C;   /* orange-red — distinct from amber warning */
-  --chart-investment:  #1D6344;   /* forest green */
-  --chart-enforcement: #1E3A8A;   /* deep blue — keeps chart contrast */
-  --chart-evasion:     #6B21A8;   /* deep purple */
+  /* Chart palette */
+  --chart-compliance:  #07A0C3;
+  --chart-relocation:  #086788;
+  --chart-investment:  #15803D;
+  --chart-enforcement: #7C3AED;
+  --chart-evasion:     #C2410C;
 
   /* Borders */
-  --border-warm:   rgba(60, 40, 20, 0.10);
-  --border-strong: rgba(60, 40, 20, 0.20);
+  --border-warm:   rgba(8, 103, 136, 0.12);
+  --border-strong: rgba(8, 103, 136, 0.22);
 
   /* Shadows */
-  --shadow-card:   0 1px 3px rgba(26,18,8,0.06), 0 4px 16px rgba(26,18,8,0.04);
-  --shadow-raised: 0 2px 8px rgba(26,18,8,0.08), 0 8px 32px rgba(26,18,8,0.06);
-  --shadow-focus:  0 0 0 3px rgba(139,26,26,0.18);
+  --shadow-card:   0 1px 3px rgba(8,103,136,0.06), 0 4px 16px rgba(8,103,136,0.04);
+  --shadow-raised: 0 2px 8px rgba(8,103,136,0.08), 0 8px 32px rgba(8,103,136,0.06);
+  --shadow-focus:  0 0 0 3px rgba(7,160,195,0.22);
 }
 
 html {
@@ -54,41 +59,24 @@ html {
 
 body {
   color: var(--ink-900);
-  background-color: var(--cream-50);
+  background-color: #FFFFFF;
   font-family: var(--font-inter), sans-serif;
   position: relative;
 }
 
-/* ── Grain texture overlay ──────────────────────────────────────────
-   SVG feTurbulence rendered as a data-URI gives the flat cream
-   surfaces organic paper-like texture — the single biggest
-   visual upgrade without adding a dependency.
-──────────────────────────────────────────────────────────────────── */
-body::after {
-  content: '';
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
-  z-index: 9999;
-  opacity: 0.032;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.72' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23g)'/%3E%3C/svg%3E");
-  background-repeat: repeat;
-  background-size: 180px 180px;
-}
-
 * {
-  scrollbar-color: rgba(139,100,80,0.28) transparent;
+  scrollbar-color: rgba(7,160,195,0.28) transparent;
 }
 ::-webkit-scrollbar { width: 8px; height: 8px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb {
-  background: rgba(139,100,80,0.25);
+  background: rgba(7,160,195,0.25);
   border-radius: 999px;
   border: 2px solid transparent;
   background-clip: padding-box;
 }
 ::selection {
-  background: rgba(139,26,26,0.16);
+  background: rgba(7,160,195,0.18);
   color: var(--ink-900);
 }
 
@@ -99,52 +87,52 @@ body::after {
 @layer components {
   /* ── Cards ───────────────────────────────────────────────────── */
   .card-warm {
-    @apply rounded-2xl border bg-[var(--cream-100)];
+    @apply rounded-2xl border bg-[var(--surface-100)];
     border-color: var(--border-warm);
     box-shadow: var(--shadow-card);
   }
   .card-raised {
-    @apply rounded-2xl border bg-[var(--cream-100)];
+    @apply rounded-2xl border bg-[var(--surface-100)];
     border-color: var(--border-warm);
     box-shadow: var(--shadow-raised);
   }
-  /* Crimson-tinted card — use sparingly (error states, severity callouts) */
+  /* Primary-tinted card — use sparingly (error states, severity callouts) */
   .card-tinted {
-    @apply rounded-2xl border bg-[var(--crimson-50)];
-    border-color: var(--crimson-100);
+    @apply rounded-2xl border bg-[var(--primary-50)];
+    border-color: var(--primary-100);
     box-shadow: var(--shadow-card);
   }
 
-  /* ── Buttons — crimson only here ──────────────────────────────── */
+  /* ── Buttons — primary only here ──────────────────────────────── */
   .btn-primary {
     @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold text-white transition-all duration-150 active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-50;
-    background: var(--crimson-700);
+    background: var(--primary-700);
   }
-  .btn-primary:hover:not(:disabled) { background: var(--crimson-600); }
+  .btn-primary:hover:not(:disabled) { background: var(--primary-600); }
 
   .btn-secondary {
     @apply inline-flex items-center justify-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-semibold transition-all duration-150 active:scale-[0.97];
-    background: var(--cream-200);
+    background: var(--surface-200);
     border-color: var(--border-warm);
     color: var(--ink-700);
   }
-  .btn-secondary:hover { background: var(--cream-300); }
+  .btn-secondary:hover { background: var(--surface-100); }
 
   /* ── Form inputs ──────────────────────────────────────────────── */
   .input-warm {
     @apply w-full rounded-xl border px-3 py-2 text-sm outline-none transition-all duration-150;
-    background: var(--cream-200);
+    background: var(--white);
     border-color: var(--border-warm);
     color: var(--ink-900);
   }
   .input-warm::placeholder { color: var(--ink-400); }
   .input-warm:focus {
-    border-color: var(--crimson-700);
+    border-color: var(--primary-700);
     box-shadow: var(--shadow-focus);
   }
   .select-warm { @apply input-warm cursor-pointer; }
 
-  /* ── Typography helpers — ink, not crimson ────────────────────── */
+  /* ── Typography helpers — ink, not primary ────────────────────── */
   .kicker {
     @apply text-[11px] font-semibold uppercase tracking-[0.22em];
     color: var(--ink-400);
@@ -177,13 +165,6 @@ body::after {
 @keyframes shimmerWarm {
   0%   { background-position: -400px 0; }
   100% { background-position:  400px 0; }
-}
-
-/* Used by TopNav animated gradient mesh */
-@keyframes meshDrift {
-  0%   { background-position: 0% 50%; }
-  50%  { background-position: 100% 50%; }
-  100% { background-position: 0% 50%; }
 }
 
 /* Entrance animation for results panel — more dramatic than slideUpFade */
@@ -242,9 +223,9 @@ body::after {
     animation: shimmerWarm 1.6s infinite linear;
     background-image: linear-gradient(
       90deg,
-      var(--cream-200) 0%,
-      var(--cream-300) 40%,
-      var(--cream-200) 80%
+      var(--surface-100) 0%,
+      var(--surface-200) 40%,
+      var(--surface-100) 80%
     );
     background-size: 600px 100%;
   }

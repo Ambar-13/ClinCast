@@ -128,12 +128,12 @@ class PopulationArray:
         state[:, COL_TRIAL_FATIGUE] = 0.0
 
         # Conscientiousness: Beta(2.5, 2.5) centered at 0.5, slight positive skew for trial enrollees
-        # Roberts et al. (2009) meta-analysis: Conscientiousness r=0.19 with adherence
+        # Molloy et al. (2014) Annals Behav Med meta (16 studies, N=3476): r=0.149 for C→medication adherence
         # [GROUNDED direction; Beta parameterization ASSUMED]
         state[:, COL_CONSCIENTIOUSNESS] = rng.beta(2.5, 2.5, size=n).astype(np.float32)
 
         # Personal Control (IPQ-R): Beta(3, 2) mean=0.6 — trial enrollees self-select for agency
-        # Hagger & Orbell (2003) meta: IPQ-R personal control r=0.21 with coping/adherence
+        # Brandes & Mullan (2014) Health Psych Rev meta (30 CSM studies): r=0.12 for PC→adherence
         # [GROUNDED direction; prior ASSUMED]
         state[:, COL_PERSONAL_CONTROL] = rng.beta(3.0, 2.0, size=n).astype(np.float32)
 

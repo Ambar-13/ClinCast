@@ -113,12 +113,12 @@ function PolicyPanel({ onApply }: PolicyPanelProps) {
 
       {open && (
         <div className="border-t px-4 pb-4 pt-3 space-y-4"
-          style={{ borderColor: "var(--border-warm)", background: "var(--cream-200)" }}>
+          style={{ borderColor: "var(--border-warm)", background: "var(--surface-100)" }}>
           {POLICY_SLIDERS.map((s) => (
             <div key={s.key}>
               <div className="flex items-center justify-between mb-1">
                 <span className="text-[11px] font-medium" style={{ color: "var(--ink-600)" }}>{s.label}</span>
-                <span className="text-xs font-semibold font-mono" style={{ color: "var(--crimson-700)" }}>
+                <span className="text-xs font-semibold font-mono" style={{ color: "var(--primary-700)" }}>
                   {values[s.key].toFixed(2)}
                 </span>
               </div>
@@ -126,12 +126,12 @@ function PolicyPanel({ onApply }: PolicyPanelProps) {
                 type="range" min={0} max={1} step={0.01}
                 value={values[s.key]}
                 onChange={(e) => setVal(s.key, parseFloat(e.target.value))}
-                className="w-full accent-[var(--crimson-700)] h-1.5 cursor-pointer"
+                className="w-full accent-[var(--primary-700)] h-1.5 cursor-pointer"
               />
               <div className="flex items-center justify-between mt-0.5">
                 <p className="text-[10px]" style={{ color: "var(--ink-400)" }}>{s.hint}</p>
                 <span className="font-mono text-[9px] rounded px-1.5 py-0.5"
-                  style={{ background: "rgba(139,26,26,0.07)", color: "var(--crimson-700)", border: "1px solid rgba(139,26,26,0.12)" }}>
+                  style={{ background: "rgba(7,160,195,0.07)", color: "var(--primary-700)", border: "1px solid rgba(7,160,195,0.12)" }}>
                   {s.preview(values[s.key])}
                 </span>
               </div>
@@ -262,18 +262,18 @@ export default function SimulatePage() {
                     <input type="checkbox" checked={useSwarm}
                       onChange={(e) => setUseSwarm(e.target.checked)} className="peer sr-only" />
                     <div className="h-4 w-8 rounded-full transition-colors"
-                      style={{ background: useSwarm ? "#d97706" : "var(--cream-400)" }} />
+                      style={{ background: useSwarm ? "var(--primary-700)" : "var(--surface-200)" }} />
                     <div className="absolute top-0.5 h-3 w-3 rounded-full bg-white shadow transition-transform"
                       style={{ left: "2px", transform: useSwarm ? "translateX(16px)" : "translateX(0)" }} />
                   </div>
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-1.5">
-                      <Brain size={12} style={{ color: "var(--crimson-700)", flexShrink: 0 }} />
+                      <Brain size={12} style={{ color: "var(--primary-600)", flexShrink: 0 }} />
                       <p className="text-sm font-medium" style={{ color: "var(--ink-700)" }}>
                         Swarm elicitation
                       </p>
                       <span className="rounded-full px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-widest"
-                        style={{ background: "rgba(245,158,11,0.12)", color: "#b45309", border: "1px solid rgba(245,158,11,0.25)" }}>
+                        style={{ background: "rgba(7,160,195,0.10)", color: "var(--primary-700)", border: "1px solid rgba(7,160,195,0.25)" }}>
                         SWARM-ELICITED
                       </span>
                     </div>
@@ -286,14 +286,14 @@ export default function SimulatePage() {
 
               {useSwarm && (
                 <div className="border-t px-4 pb-3 pt-3 space-y-3"
-                  style={{ borderColor: "var(--border-warm)", background: "var(--cream-200)" }}>
+                  style={{ borderColor: "var(--border-warm)", background: "var(--surface-100)" }}>
                   <div>
                     <label className="block text-xs font-medium mb-1" style={{ color: "var(--ink-700)" }}>
-                      Agents <span className="font-mono" style={{ color: "var(--crimson-700)" }}>{nAgents.toLocaleString()}</span>
+                      Agents <span className="font-mono" style={{ color: "var(--primary-700)" }}>{nAgents.toLocaleString()}</span>
                     </label>
                     <input type="range" min={10} max={5000} step={10}
                       value={nAgents} onChange={(e) => setNAgents(Number(e.target.value))}
-                      className="w-full accent-[var(--crimson-700)] h-1.5 cursor-pointer" />
+                      className="w-full accent-[var(--primary-700)] h-1.5 cursor-pointer" />
                     <div className="flex justify-between text-[10px] mt-0.5" style={{ color: "var(--ink-300)" }}>
                       <span>10 agents</span><span>5,000 agents</span>
                     </div>
@@ -362,14 +362,14 @@ export default function SimulatePage() {
                     ["Visits",  req.visits_per_month != null ? `${req.visits_per_month}/mo` : "—"],
                   ].map(([label, value]) => (
                     <div key={label} className="rounded-xl border px-4 py-2.5 text-center"
-                      style={{ background: "var(--cream-200)", borderColor: "var(--border-warm)" }}>
+                      style={{ background: "var(--surface-100)", borderColor: "var(--border-warm)" }}>
                       <p className="kicker text-[10px]">{label}</p>
                       <p className="metric-num mt-1 text-base font-bold" style={{ color: "var(--ink-900)" }}>{value}</p>
                     </div>
                   ))}
                 </div>
                 <p className="flex items-center gap-1.5 text-xs" style={{ color: "var(--ink-300)" }}>
-                  <Play size={11} style={{ color: "var(--crimson-700)" }} />
+                  <Play size={11} style={{ color: "var(--primary-600)" }} />
                   <span>Click <strong style={{ color: "var(--ink-500)" }}>Run simulation</strong> to begin</span>
                 </p>
               </div>

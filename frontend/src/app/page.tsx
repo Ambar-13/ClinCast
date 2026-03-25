@@ -25,7 +25,7 @@ const DEFAULT: SimulateRequest = {
   blinded:               true,
   competitive_pressure:  "none",
   enrollment_rate_modifier: 1.0,
-  seed:                  undefined,   // randomised per run unless user pins it
+  seed:                  0,
 };
 
 export default function SimulatePage() {
@@ -46,11 +46,9 @@ export default function SimulatePage() {
   async function run() {
     setLoading(true);
     setError(null);
-    setResult(null);   // clear stale results so a failed run never shows old data
     try {
       setResult(await simulate({
         ...req,
-        seed:           req.seed ?? Math.floor(Math.random() * 1_000_000),
         use_swarm:      useSwarm,
         n_swarm_agents: nAgents,
         openai_api_key: apiKey.trim() || undefined,

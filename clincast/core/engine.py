@@ -654,24 +654,13 @@ def _run_llm_swarm(config: SimConfig, n_agents: int = 1000) -> dict:
                 '"reasoning": "<one sentence from the patient\'s perspective>"}'
             )
 
-        # Extract API key once so each thread can build its own client.
-        # openai ≥2.x uses httpx internally; sharing one client across
-        # 30+ threads corrupts the connection pool → 400 "invalid JSON body".
-        _oai_key: str = client.api_key if is_openai else ""
-
         def call_one(args: tuple[str, str]) -> dict:
             label, desc = args
             prompt = make_prompt(desc)
             last_exc: str = ""
-            # Fresh client per thread — eliminates httpx pool contention
-            if is_openai:
-                import openai as _oai
-                thread_client = _oai.OpenAI(api_key=_oai_key)
-            else:
-                thread_client = client
             for attempt in range(2):
                 try:
-                    vote = _call_llm(thread_client, is_openai, prompt)
+                    vote = _call_llm(client, is_openai, prompt)
                     return {
                         "label":           label,
                         "belief_shift":    float(max(-0.15, min(0.15, vote.get("belief_shift", 0.0)))),

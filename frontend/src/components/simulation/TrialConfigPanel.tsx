@@ -228,6 +228,35 @@ export function TrialConfigPanel({ value, onChange, label }: Props) {
       <div className="mb-5 rounded-lg px-4 py-3" style={{ background: "var(--cream-100)", border: "1px solid var(--cream-300)" }}>
         <p className="text-[11px] font-semibold uppercase tracking-wider mb-1" style={{ color: "var(--ink-400)" }}>POLICY INTERPRETATION</p>
         <p className="text-[13px] leading-relaxed" style={{ color: "var(--ink-700)" }}>{narrative}</p>
+        <div className="mt-3 pt-3 grid grid-cols-3 gap-2 text-center" style={{ borderTop: "1px solid var(--cream-300)" }}>
+          {[
+            { label: "Visits/mo", val: value.visits_per_month ?? 2,    lo: "0.5 = bimonthly\nTypical oncology follow-up", hi: "4 = weekly\nPhase 1 / intensive PK" },
+            { label: "Visit hrs",  val: value.visit_duration_hours ?? 1.5, lo: "0.5h = quick check-in\nSelf-report / vitals only", hi: "6h+ = intensive\nIV infusion + PK draws" },
+          ].map(({ label, val, lo, hi }) => (
+            <div key={label} className="rounded p-2" style={{ background: "var(--cream-200)" }}>
+              <p className="text-[10px] font-medium" style={{ color: "var(--ink-500)" }}>{label}</p>
+              <p className="text-[15px] font-bold" style={{ color: "var(--ink-800)" }}>{val}</p>
+              <p className="text-[10px] mt-0.5 whitespace-pre-line leading-tight" style={{ color: "var(--ink-400)" }}>{val <= (label === "Visits/mo" ? 1 : 1) ? lo : hi}</p>
+            </div>
+          ))}
+          <div className="rounded p-2" style={{ background: "var(--cream-200)" }}>
+            <p className="text-[10px] font-medium" style={{ color: "var(--ink-500)" }}>Burden tier</p>
+            {(() => {
+              const visits = value.visits_per_month ?? 2;
+              const hrs    = value.visit_duration_hours ?? 1.5;
+              const inv    = value.invasive_procedures && value.invasive_procedures !== "none";
+              const score  = [visits >= 3, hrs >= 3, inv, value.ediary_frequency && value.ediary_frequency !== "none"].filter(Boolean).length;
+              const tier   = score >= 3 ? ["🔴", "HIGH", "#dc2626"] : score >= 1 ? ["🟡", "MEDIUM", "#d97706"] : ["🟢", "LOW", "#16a34a"];
+              return <>
+                <p className="text-[18px]">{tier[0]}</p>
+                <p className="text-[11px] font-bold" style={{ color: tier[2] as string }}>{tier[1] as string}</p>
+                <p className="text-[10px] mt-0.5 leading-tight" style={{ color: "var(--ink-400)" }}>
+                  {score >= 3 ? "Expect high dropout" : score >= 1 ? "Moderate dropout risk" : "Retention-friendly"}
+                </p>
+              </>;
+            })()}
+          </div>
+        </div>
       </div>
 
       {/* ── Therapeutic Area ─────────────────────────────────────────────── */}

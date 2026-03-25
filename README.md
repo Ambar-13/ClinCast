@@ -13,17 +13,17 @@
   [![Next.js](https://img.shields.io/badge/Next.js-15-086788.svg)](https://nextjs.org)
 </div>
 
+Clinical trials fail in predictable ways. Enrollment falls behind. Patients drop out earlier than anticipated. Sites that looked great on paper activate months late and enroll almost nobody. These failures are expensive — and many of them could have been caught with a better model.
+
+ClinFish is a simulation engine that tries to capture this. It models individual patients (not just averages), realistic site activation timelines, social network effects on belief and trust, and the behavioral personality traits that actually predict whether someone finishes a trial. Every number in the model is tagged with how confident we are in it — grounded in data, directional from theory, or just an assumption that needs testing.
+
+---
+
 ![Configure](docs/ui.png)
 
 ![Results](docs/ui-results.png)
 
 ![Agents](docs/ui-agents.jpg)
-
----
-
-Clinical trials fail in predictable ways. Enrollment falls behind. Patients drop out earlier than anticipated. Sites that looked great on paper activate months late and enroll almost nobody. These failures are expensive — and many of them could have been caught with a better model.
-
-ClinFish is a simulation engine that tries to capture this. It models individual patients (not just averages), realistic site activation timelines, social network effects on belief and trust, and the behavioral personality traits that actually predict whether someone finishes a trial. Every number in the model is tagged with how confident we are in it — grounded in data, directional from theory, or just an assumption that needs testing.
 
 ---
 

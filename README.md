@@ -22,17 +22,29 @@ ClinFish is a simulation engine that tries to capture this. It models individual
 
 ## Who is this for
 
-**Clinical operations teams** running feasibility analyses before a trial starts — testing enrollment assumptions, site count strategies, and protocol complexity before they're locked in.
+ClinFish is useful anywhere someone needs to reason about what happens *inside* a trial before, during, or after it runs.
 
-**CROs and site networks** stress-testing recruitment timelines under different activation scenarios.
+**Sponsors and pharma teams** — feasibility before a protocol is locked, enrollment forecasting, stress-testing site strategies, understanding what drives dropout in a specific therapeutic area.
 
-**Academic researchers** studying trial design, dropout mechanisms, or patient behavior in longitudinal studies. The full source is readable and the model assumptions are documented.
+**CROs and site networks** — modeling recruitment timelines across site activation scenarios, evaluating decentralized trial designs, comparing site count vs. patient support tradeoffs.
 
-**Protocol designers** evaluating the dropout impact of visit frequency, AE burden, or eligibility criteria changes — without running a real trial.
+**Biostatisticians and trial methodologists** — simulation-based sample size planning that accounts for realistic dropout patterns rather than flat assumptions, sensitivity analysis around behavioral parameters.
 
-**Trial simulation researchers** who want a calibrated, conservation-checked agent-based baseline to extend or benchmark against.
+**Academic researchers** — anyone studying trial design, patient adherence, health behavior, social network effects in healthcare, or longitudinal dropout mechanisms. The model is fully readable and every assumption is documented.
 
-ClinFish is not a regulatory submission tool and doesn't replace clinical judgment. It's a way to think more carefully about what a trial design implies before committing to it.
+**Health psychologists and behavioral scientists** — the patient archetype system, Big Five personality model, dual belief dynamics, and social network propagation are designed to be extended. ClinFish gives a working simulation harness for behavioral theories.
+
+**Protocol designers and medical writers** — quickly translating a draft protocol into a simulation to see whether the visit schedule, eligibility criteria, or AE monitoring burden create retention problems before the protocol goes to IRB.
+
+**Digital health and DCT teams** — modeling the impact of decentralized design choices (eConsent, remote visits, eDiary frequency) on adherence and dropout.
+
+**Healthcare economists and outcomes researchers** — trial failure costs money and delays access to treatments. ClinFish can model the downstream impact of design decisions on timeline and completion probability.
+
+**Educators** — the codebase is a concrete implementation of competing-risks survival, DeGroot belief dynamics, stock-flow conservation, and SMM calibration. Useful as a teaching tool for advanced trial methodology or health systems modeling courses.
+
+**Developers building clinical tools** — open API, Apache 2.0 license. Use it as a backend for feasibility dashboards, protocol optimization tools, or trial planning platforms.
+
+ClinFish is not a regulatory submission tool and makes no clinical recommendations. It is a modeling framework — the quality of outputs depends entirely on the quality of assumptions fed in, and those assumptions are made explicit for exactly that reason.
 
 ---
 

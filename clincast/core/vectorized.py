@@ -47,7 +47,8 @@ COL_TRIAL_FATIGUE       = 7   # accumulating fatigue stock (inflow: visits+AEs, 
 COL_CONSCIENTIOUSNESS   = 8   # Big Five Conscientiousness trait [GROUNDED: Roberts 2009 meta r=0.19]
 COL_PERSONAL_CONTROL    = 9   # IPQ-R Personal Control subscale [GROUNDED: Hagger & Orbell 2003]
 COL_ADHERENCE_STATE     = 10  # Markov adherence state: 0=holiday, 1=taking [GROUNDED: Vrijens 2008]
-N_COLS = 11
+COL_NEUROTICISM         = 11  # Big Five Neuroticism [GROUNDED direction; Beta prior ASSUMED]
+N_COLS = 12
 
 # Status codes
 STATUS_SCREENING  = 0.0
@@ -135,6 +136,12 @@ class PopulationArray:
         # Hagger & Orbell (2003) meta: IPQ-R personal control r=0.21 with coping/adherence
         # [GROUNDED direction; prior ASSUMED]
         state[:, COL_PERSONAL_CONTROL] = rng.beta(3.0, 2.0, size=n).astype(np.float32)
+
+        # Neuroticism: Beta(3, 4) mean≈0.43 — slight negative skew for trial enrollees
+        # (self-selection: very high-N patients are less likely to enroll)
+        # Bogg & Roberts 2004: N r≈-0.09 to -0.15 with health behaviors [GROUNDED direction]
+        # [Beta prior ASSUMED]
+        state[:, COL_NEUROTICISM] = rng.beta(3.0, 4.0, size=n).astype(np.float32)
 
         # Initial adherence state: Bernoulli(archetype_adherence_prob) for each patient
         # Vrijens et al. BMJ 2008: ~50% in non-persistence by 1 year but execution rate ~90%

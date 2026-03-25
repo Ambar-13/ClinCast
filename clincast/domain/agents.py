@@ -130,6 +130,14 @@ class PatientArchetype:
     # [GROUNDED direction; archetype values DIRECTIONAL]
     personal_control: float = 0.5    # default middle
 
+    # Big Five Neuroticism trait score (0-1, normalized).
+    # Bogg & Roberts (2004) Psychological Bulletin meta-analysis (n=194 studies):
+    # Neuroticism shows r≈-0.09 to -0.15 with health behaviors.
+    # Direction is GROUNDED; weaker than Conscientiousness.
+    # Coefficient deflated in adherence formula to account for TREATMENT_NAIVE_HIGH_ANXIETY
+    # archetype already absorbing high-N patients. [GROUNDED direction; values DIRECTIONAL]
+    neuroticism: float = 0.5
+
 
 ARCHETYPES: dict[ArchetypeID, PatientArchetype] = {
 
@@ -152,6 +160,7 @@ ARCHETYPES: dict[ArchetypeID, PatientArchetype] = {
         default_proportion=0.20,
         conscientiousness=0.55,
         personal_control=0.35,
+        neuroticism=0.72,   # defines the archetype — high anxiety ≡ high N
     ),
 
     ArchetypeID.EXPERIENCED_ADVOCATE: PatientArchetype(
@@ -173,6 +182,7 @@ ARCHETYPES: dict[ArchetypeID, PatientArchetype] = {
         default_proportion=0.15,
         conscientiousness=0.80,
         personal_control=0.75,
+        neuroticism=0.25,   # active health management correlates with low N
     ),
 
     ArchetypeID.CAREGIVER_DEPENDENT_ELDERLY: PatientArchetype(
@@ -195,6 +205,7 @@ ARCHETYPES: dict[ArchetypeID, PatientArchetype] = {
         default_proportion=0.20,
         conscientiousness=0.60,
         personal_control=0.40,
+        neuroticism=0.52,   # moderate; not primarily N-driven
     ),
 
     ArchetypeID.LOW_ACCESS_RURAL: PatientArchetype(
@@ -216,6 +227,7 @@ ARCHETYPES: dict[ArchetypeID, PatientArchetype] = {
         default_proportion=0.25,
         conscientiousness=0.50,
         personal_control=0.45,
+        neuroticism=0.45,   # access barriers, not personality, dominate
     ),
 
     ArchetypeID.MOTIVATED_YOUNG_ADULT: PatientArchetype(
@@ -237,6 +249,7 @@ ARCHETYPES: dict[ArchetypeID, PatientArchetype] = {
         default_proportion=0.20,
         conscientiousness=0.75,
         personal_control=0.72,
+        neuroticism=0.28,   # motivated self-selector, low N
     ),
 }
 

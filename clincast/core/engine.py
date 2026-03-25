@@ -45,6 +45,7 @@ from clincast.core.vectorized import (
     STATUS_SCREENING, STATUS_ENROLLED, STATUS_DROPOUT, STATUS_COMPLETED,
     COL_BELIEF, COL_ADHERENCE_PROB, COL_DROPOUT_HAZARD,
     COL_CUMULATIVE_AE, COL_VISIT_BURDEN, COL_STATUS,
+    COL_INSTITUTIONAL_TRUST,
 )
 from clincast.domain.agents import (
     PatientPopulationConfig,
@@ -300,6 +301,28 @@ def run_simulation(config: SimConfig) -> TrialOutputs:
             pop.set_beliefs(updated_beliefs)
             n_seeded_this_round = int(seeded_mask.sum())
 
+        # Update institutional trust: asymmetric first-order SMOOTH
+        # Trust is slow-moving, sponsor-signal-driven (not peer-network-driven).
+        # Trust erodes faster than it recovers — negativity bias (Slovic 1993,
+        # Risk Analysis). Data breach recovery literature: ~1yr to recover,
+        # 3-5x faster to damage. τ_decay=3mo, τ_recovery=12mo [DIRECTIONAL].
+        # Trust goal: pulled down by amendment pressure (site_burden) and
+        # accumulated safety signals. Tufts CSDD 2022: amendments increase
+        # dropout 18.8%→29.6% — best available proxy for trust erosion.
+        # [GROUNDED direction; linear scaling ASSUMED]
+        institutional_trust = pop.state[enrolled_idx, COL_INSTITUTIONAL_TRUST]
+        trust_goal = float(np.clip(
+            1.0 - 0.4 * stocks.site_burden.level - 0.3 * stocks.safety_signal.level,
+            0.0, 1.0,
+        ))
+        trust_goal_arr = np.full(len(enrolled_idx), trust_goal, dtype=np.float32)
+        gap = trust_goal_arr - institutional_trust
+        # Asymmetric τ: decay (gap<0) uses τ=3, recovery (gap>0) uses τ=12
+        tau_arr = np.where(gap < 0, 3.0, 12.0).astype(np.float32)
+        pop.state[enrolled_idx, COL_INSTITUTIONAL_TRUST] = np.clip(
+            institutional_trust + gap / tau_arr, 0.0, 1.0,
+        ).astype(np.float32)
+
         # 4. Compute adherence, visit compliance, AE reporting
         adh = adherence_probability(
             archetype_id_array=pop.archetype_ids[enrolled_idx],
@@ -307,6 +330,7 @@ def run_simulation(config: SimConfig) -> TrialOutputs:
             cumulative_ae=pop.state[enrolled_idx, COL_CUMULATIVE_AE],
             protocol_burden=config.protocol_burden,
             time_months=t_months,
+            institutional_trust=pop.state[enrolled_idx, COL_INSTITUTIONAL_TRUST],
         )
         pop.state[enrolled_idx, COL_ADHERENCE_PROB] = adh
 

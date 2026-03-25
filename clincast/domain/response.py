@@ -298,6 +298,9 @@ _AE_REPORTING_BASE = np.array(
     dtype=np.float64,
 )
 
+_CONSCIENTIOUSNESS_BASE = np.array([ARCHETYPES[ArchetypeID(i)].conscientiousness for i in range(len(ArchetypeID))], dtype=np.float64)
+_NEUROTICISM_BASE       = np.array([ARCHETYPES[ArchetypeID(i)].neuroticism        for i in range(len(ArchetypeID))], dtype=np.float64)
+
 
 # ─────────────────────────────────────────────────────────────────────────────
 # COMPETING RISKS PROPORTIONS
@@ -420,6 +423,9 @@ def adherence_probability(
     time_months: float,
     trial_fatigue: np.ndarray | None = None,
     institutional_trust: np.ndarray | None = None,
+    conscientiousness: np.ndarray | None = None,    # ADD
+    neuroticism: np.ndarray | None = None,          # ADD
+    personal_control: np.ndarray | None = None,     # ADD
 ) -> np.ndarray:
     """Per-patient probability of being adherent this month.
 
@@ -452,6 +458,19 @@ def adherence_probability(
         Per-patient slow-updating institutional/sponsor trust (0-1). When
         provided, splits the belief modifier into fast (belief) and slow
         (institutional_trust) components.
+      - Conscientiousness: higher C → higher adherence execution.
+        Bogg & Roberts (2004) Psych Bull meta: r=0.20 for C→health behaviors.
+        Coefficient deflated (0.15) from bivariate r to account for archetype overlap.
+        [GROUNDED direction; coefficient magnitude DIRECTIONAL]
+      - Neuroticism: higher N → lower adherence.
+        Bogg & Roberts (2004): r≈-0.09 to -0.15 for N→health behaviors (weaker than C).
+        Coefficient -0.08 deflated from r to account for archetype overlap with
+        TREATMENT_NAIVE_HIGH_ANXIETY archetype.
+        [GROUNDED direction; coefficient magnitude DIRECTIONAL]
+      - Personal Control (IPQ-R): higher PC → higher adherence.
+        Hagger & Orbell (2003) meta: r=0.21 for IPQ-R PC→coping/adaptation.
+        Coefficient 0.08 deflated due to C/PC correlation (r≈0.25-0.30).
+        [GROUNDED direction; coefficient magnitude DIRECTIONAL]
 
     Returns adherence_prob array of shape (n_patients,), values in [0, 1].
     """
@@ -493,6 +512,20 @@ def adherence_probability(
     # AE load: high AE → reduced adherence motivation [DIRECTIONAL]
     ae_penalty = 0.15 * cumulative_ae  # [ASSUMED magnitude]
     base -= ae_penalty
+
+    # Personality modifiers: applied as multiplicative deviation from archetype mean
+    # (multiplicative preserves [0,1] bounds; additive can exceed bounds)
+    # Centered at 0.5 so deviation from midpoint drives the effect.
+    # Coefficients are deflated from bivariate r-values to account for archetype
+    # baseline already absorbing mean-level personality differences per archetype.
+    if conscientiousness is not None or neuroticism is not None or personal_control is not None:
+        c_effect  = 0.15 * ((conscientiousness  - 0.5) if conscientiousness  is not None else np.zeros_like(base))
+        n_effect  = 0.08 * ((neuroticism        - 0.5) if neuroticism        is not None else np.zeros_like(base))
+        pc_effect = 0.08 * ((personal_control   - 0.5) if personal_control   is not None else np.zeros_like(base))
+        # Bogg & Roberts 2004 [GROUNDED direction; DIRECTIONAL magnitude]
+        # Hagger & Orbell 2003 [GROUNDED direction; DIRECTIONAL magnitude]
+        personality_modifier = np.clip(1.0 + c_effect - n_effect + pc_effect, 0.7, 1.3)
+        base *= personality_modifier
 
     return np.clip(base, 0.0, 1.0).astype(np.float32)
 
@@ -538,7 +571,10 @@ def visit_compliance_probability(
     # HBM Barriers r=-0.21 (Carpenter CJ, Health Communication 2010, PMID 21153982)
     # Exponential saturation: f(b) = 0.15 * (1 - exp(-3*max(0, b-0.3))) [DIRECTIONAL]
     burden_above_threshold = max(0.0, protocol_visit_burden - 0.3)
-    burden_penalty = 0.15 * (1.0 - math.exp(-3.0 * burden_above_threshold))  # [DIRECTIONAL magnitude]
+    # [ASSUMED — nonlinear saturation shape supported by dose-simplification literature
+    #  but threshold 0.3 and exponent 3.0 have no published anchor.
+    #  Sensitivity sweep recommended: threshold ∈ [0.1, 0.5], exponent ∈ [1.5, 5.0]]
+    burden_penalty = 0.15 * (1.0 - math.exp(-3.0 * burden_above_threshold))
     base -= burden_penalty
 
     # Trust: high belief → patient shows up even when inconvenient [DIRECTIONAL]

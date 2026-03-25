@@ -136,15 +136,99 @@ function Toggle({
   );
 }
 
+// ── Policy narrative ──────────────────────────────────────────────────────────
+
+function policyNarrative(v: SimulateRequest): string {
+  const ta: Record<string, string> = {
+    cns: "CNS / schizophrenia", oncology: "oncology", cardiovascular: "cardiovascular",
+    metabolic: "metabolic / T2DM", alzheimers: "Alzheimer's disease", rare: "rare disease",
+  };
+  const area = ta[v.therapeutic_area] ?? v.therapeutic_area;
+  const pts  = v.n_patients  ?? 400;
+  const sites= v.n_sites     ?? 20;
+  const mos  = v.n_rounds    ?? 18;
+
+  // Scale
+  const scale = pts >= 800 ? "large-scale" : pts >= 300 ? "mid-size" : "small";
+
+  // Burden
+  const visitsHigh  = (v.visits_per_month  ?? 2) >= 3;
+  const durationHigh= (v.visit_duration_hours ?? 1.5) >= 3;
+  const invasive    = v.invasive_procedures && v.invasive_procedures !== "none";
+  const eDiary      = v.ediary_frequency && v.ediary_frequency !== "none";
+  const burdenLevel = [visitsHigh, durationHigh, invasive, eDiary].filter(Boolean).length;
+  const burden      = burdenLevel >= 3 ? "high-burden" : burdenLevel >= 1 ? "moderate-burden" : "low-burden";
+
+  // Support
+  const hasRBM     = v.monitoring_active !== false;
+  const hasSupport = v.patient_support_program === true;
+
+  // Design
+  const ratio      = v.randomization_ratio ?? "1:1";
+  const blinded    = v.blinded !== false;
+  const pressure   = v.competitive_pressure ?? "none";
+
+  // Sentences
+  const sentences: string[] = [];
+
+  sentences.push(
+    `This organisation is running a ${scale} ${area} trial across ${sites} sites over ${mos} months with ${pts} patients.`
+  );
+
+  if (burden === "high-burden") {
+    sentences.push("The protocol is demanding — frequent visits, long appointments, and invasive procedures signal a late-phase efficacy study willing to accept high dropout risk for rigorous data.");
+  } else if (burden === "moderate-burden") {
+    sentences.push("The protocol is moderately burdensome — a reasonable trade-off between data richness and patient retention.");
+  } else {
+    sentences.push("The protocol is patient-friendly — minimal visits and no invasive procedures, prioritising retention over data density.");
+  }
+
+  if (hasSupport && hasRBM) {
+    sentences.push("The org is investing heavily in execution quality: risk-based monitoring catches site problems early, and the patient support programme (coordinators, transport, SMS reminders) directly fights dropout.");
+  } else if (hasSupport) {
+    sentences.push("A patient support programme is in place — the org is betting on retention over remote monitoring efficiency.");
+  } else if (hasRBM) {
+    sentences.push("Risk-based monitoring is active — the org is using data-driven site oversight rather than blanket on-site visits, suggesting cost discipline.");
+  } else {
+    sentences.push("No monitoring enhancements or patient support — the org is running lean, accepting higher data-quality and dropout risk.");
+  }
+
+  if (ratio !== "1:1") {
+    sentences.push(`A ${ratio} randomisation ratio means more patients land on treatment — this improves recruitment appeal but makes the placebo arm smaller and noisier.`);
+  }
+
+  if (!blinded) {
+    sentences.push("The trial is open-label — patients know their assignment. This cuts protocol overhead but raises dropout risk in the control arm significantly.");
+  }
+
+  if (pressure === "high" || pressure === "medium") {
+    sentences.push(`With ${pressure} competitive pressure, rival trials and media scrutiny will erode patient belief mid-run — expect a steeper dropout curve in later months.`);
+  }
+
+  if ((v.site_quality_variance ?? "medium") === "high") {
+    sentences.push("High site heterogeneity means a handful of sites will drive most of your data while others struggle — the org needs active site management to avoid a skewed dataset.");
+  }
+
+  return sentences.join(" ");
+}
+
 // ── Main panel ────────────────────────────────────────────────────────────────
 
 export function TrialConfigPanel({ value, onChange, label }: Props) {
   const set = <K extends keyof SimulateRequest>(k: K, v: SimulateRequest[K]) =>
     onChange({ ...value, [k]: v });
 
+  const narrative = policyNarrative(value);
+
   return (
     <div className="card-warm p-5 space-y-0">
       {label && <p className="kicker mb-4">{label}</p>}
+
+      {/* ── Policy narrative ─────────────────────────────────────────────── */}
+      <div className="mb-5 rounded-lg px-4 py-3" style={{ background: "var(--cream-100)", border: "1px solid var(--cream-300)" }}>
+        <p className="text-[11px] font-semibold uppercase tracking-wider mb-1" style={{ color: "var(--ink-400)" }}>POLICY INTERPRETATION</p>
+        <p className="text-[13px] leading-relaxed" style={{ color: "var(--ink-700)" }}>{narrative}</p>
+      </div>
 
       {/* ── Therapeutic Area ─────────────────────────────────────────────── */}
       <div className="pb-4">

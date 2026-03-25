@@ -251,7 +251,6 @@ def extract_with_llm(text: str, llm_client: Any) -> dict[str, Any]:
             model="gpt-4o-mini",
             messages=[{"role": "user", "content": prompt}],
             temperature=0.0,
-            response_format={"type": "json_object"},
         )
         raw = response.choices[0].message.content
     else:
@@ -262,8 +261,17 @@ def extract_with_llm(text: str, llm_client: Any) -> dict[str, Any]:
             messages=[{"role": "user", "content": prompt}],
         )
         raw = response.content[0].text
-        # Strip markdown code fences if present
-        raw = re.sub(r"^```(?:json)?\s*|\s*```$", "", raw.strip())
+
+    # Robust JSON extraction — strip markdown fences, prose wrappers, etc.
+    raw = raw.strip()
+    if raw.startswith("```"):
+        raw = raw.split("```")[1]
+        if raw.startswith("json"):
+            raw = raw[4:]
+    if "{" in raw:
+        raw = raw[raw.index("{"):]
+    if "}" in raw:
+        raw = raw[:raw.rindex("}") + 1]
 
     return json.loads(raw)
 

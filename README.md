@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="https://raw.githubusercontent.com/Ambar-13/ClinFish/master/logo.svg" alt="ClinFish" width="160" height="130"/>
+  <img src="logo.svg" alt="ClinFish" width="160" height="130"/>
 
   <h1>ClinFish</h1>
 
@@ -17,6 +17,22 @@
 Clinical trials fail in predictable ways. Enrollment falls behind. Patients drop out earlier than anticipated. Sites that looked great on paper activate months late and enroll almost nobody. These failures are expensive — and many of them could have been caught with a better model.
 
 ClinFish is a simulation engine that tries to capture this. It models individual patients (not just averages), realistic site activation timelines, social network effects on belief and trust, and the behavioral personality traits that actually predict whether someone finishes a trial. Every number in the model is tagged with how confident we are in it — grounded in data, directional from theory, or just an assumption that needs testing.
+
+---
+
+## Who is this for
+
+**Clinical operations teams** running feasibility analyses before a trial starts — testing enrollment assumptions, site count strategies, and protocol complexity before they're locked in.
+
+**CROs and site networks** stress-testing recruitment timelines under different activation scenarios.
+
+**Academic researchers** studying trial design, dropout mechanisms, or patient behavior in longitudinal studies. The full source is readable and the model assumptions are documented.
+
+**Protocol designers** evaluating the dropout impact of visit frequency, AE burden, or eligibility criteria changes — without running a real trial.
+
+**Trial simulation researchers** who want a calibrated, conservation-checked agent-based baseline to extend or benchmark against.
+
+ClinFish is not a regulatory submission tool and doesn't replace clinical judgment. It's a way to think more carefully about what a trial design implies before committing to it.
 
 ---
 
@@ -180,7 +196,7 @@ Every numerical constant in the behavioral model carries one of three tags:
 
 **`[ASSUMED]`** — no strong empirical anchor. The docstring names the range for the sensitivity sweep.
 
-This tagging system is the core IP of ClinFish. It makes the epistemic status of every parameter explicit and auditable, rather than hiding it in a configuration file.
+This tagging system is what makes ClinFish auditable. The epistemic status of every parameter is explicit in the source — not buried in a config file or assumed away.
 
 ---
 
@@ -244,7 +260,7 @@ The full interactive docs are at `/docs` after starting the server.
 
 | Method | Endpoint | Description |
 |---|---|---|
-| `POST` | `/simulate/run` | Run a full simulation |
+| `POST` | `/simulate` | Run a full simulation |
 | `POST` | `/simulate/compare` | Run two configs and compare |
 | `GET` | `/simulate/nct/{nct_id}` | Fetch NCT trial and build SimConfig |
 | `POST` | `/simulate/policy` | Apply sponsor policy to SimConfig |

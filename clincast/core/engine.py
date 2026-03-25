@@ -664,7 +664,7 @@ def _run_llm_swarm(config: SimConfig, n_agents: int = 1000) -> dict:
             label, desc = args
             prompt = make_prompt(desc)
             last_exc: str = ""
-            for attempt in range(3):
+            for attempt in range(4):
                 try:
                     vote = _call_llm(client, is_openai, prompt)
                     return {
@@ -676,13 +676,13 @@ def _run_llm_swarm(config: SimConfig, n_agents: int = 1000) -> dict:
                 except Exception as exc:
                     last_exc = str(exc)
                     is_rate = "429" in last_exc or "rate" in last_exc.lower() or "quota" in last_exc.lower()
-                    if is_rate and attempt < 2:
-                        _time.sleep(2.0 ** attempt)  # 1s, 2s back-off
+                    if is_rate and attempt < 3:
+                        _time.sleep(5.0 * (2 ** attempt))  # 5s, 10s, 20s
                         continue
                     break
             return {"_failed": True, "_error": last_exc}
 
-        n_workers = min(10, n_agents)
+        n_workers = min(5, n_agents)
         results: list[dict] = []
         n_failed = 0
         first_error: str = ""

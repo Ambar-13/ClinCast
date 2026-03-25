@@ -30,7 +30,7 @@ import dataclasses
 
 import numpy as np
 
-from clincast.domain.agents import PatientPopulationConfig, ARCHETYPES, ArchetypeID
+from clinfish.domain.agents import PatientPopulationConfig, ARCHETYPES, ArchetypeID
 
 
 # Column indices — kept as named constants so array access is readable

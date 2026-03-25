@@ -378,7 +378,7 @@ INSTITUTIONAL_ACTORS: dict[InstitutionType, InstitutionalActor] = {
 class PatientPopulationConfig:
     """Configuration for generating a heterogeneous patient population.
 
-    Therapeutic-area-specific defaults are in clincast/scenarios/.
+    Therapeutic-area-specific defaults are in clinfish/scenarios/.
     """
     n_patients: int
     n_sites: int

@@ -1,4 +1,4 @@
-"""Request schemas for the ClinCast REST API."""
+"""Request schemas for the ClinFish REST API."""
 
 from __future__ import annotations
 

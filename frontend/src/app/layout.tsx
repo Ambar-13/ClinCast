@@ -18,7 +18,7 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "ClinCast",
+  title: "ClinFish",
   description: "Open-source behavioral simulation engine for clinical trials. Apache 2.0.",
   themeColor: "#086788",
 };

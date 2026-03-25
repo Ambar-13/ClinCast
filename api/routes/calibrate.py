@@ -9,9 +9,9 @@ router = APIRouter(prefix="/calibrate", tags=["calibration"])
 @router.post("", response_model=CalibrateResponse)
 def calibrate(req: CalibrateRequest) -> CalibrateResponse:
     """Run SMM calibration for a therapeutic area (CPU-intensive, ~60–300s)."""
-    from clincast.core.calibration.smm import run_smm
-    from clincast.core.calibration.moments import get_moments
-    from clincast.core.engine import SimConfig, run_simulation
+    from clinfish.core.calibration.smm import run_smm
+    from clinfish.core.calibration.moments import get_moments
+    from clinfish.core.engine import SimConfig, run_simulation
 
     try:
         target = get_moments(req.therapeutic_area)

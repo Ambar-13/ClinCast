@@ -59,7 +59,7 @@ time-specific CIFs. Use as a sanity check on simulated terminal dropout:
 Weibull shape parameter guidance (Beyersmann Stat Med 2009;
 Ganguly Stat Med 2026 DOI:10.1002/sim.70466):
   κ < 1: decreasing hazard → early AE-driven dropout (CNS high-anxiety)
-  κ = 1: exponential → constant hazard (current ClinCast default) [ASSUMED]
+  κ = 1: exponential → constant hazard (current ClinFish default) [ASSUMED]
   κ > 1: increasing hazard → compliance fatigue (long oncology, AD trials)
   For trials >12 months, κ > 1 is likely warranted. Sweep κ ∈ [0.7, 2.0].
 """
@@ -68,7 +68,7 @@ from __future__ import annotations
 
 import numpy as np
 
-from clincast.core.calibration.smm import TargetMoments
+from clinfish.core.calibration.smm import TargetMoments
 
 
 def cns_moments() -> TargetMoments:

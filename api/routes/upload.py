@@ -10,7 +10,7 @@ from typing import Any, Optional
 from fastapi import APIRouter, HTTPException, UploadFile, File, Form
 from pydantic import BaseModel
 
-from clincast.ingest.protocol import parse_protocol, TrialSpec
+from clinfish.ingest.protocol import parse_protocol, TrialSpec
 
 router = APIRouter(prefix="/upload", tags=["protocol"])
 

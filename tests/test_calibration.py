@@ -8,14 +8,14 @@ the pipeline runs end-to-end and returns plausible outputs.
 import numpy as np
 import pytest
 
-from clincast.core.calibration.smm import (
+from clinfish.core.calibration.smm import (
     TargetMoments,
     SimulatedMoments,
     MLPSurrogate,
     latin_hypercube_sample,
     run_smm,
 )
-from clincast.core.calibration.moments import (
+from clinfish.core.calibration.moments import (
     cns_moments,
     cardiovascular_moments,
     oncology_moments,
@@ -110,7 +110,7 @@ def test_mlp_surrogate_fit_predict():
 
 def test_run_smm_pipeline_smoke():
     """Smoke test: run SMM with minimal samples to verify the full pipeline."""
-    from clincast.core.engine import SimConfig, run_simulation
+    from clinfish.core.engine import SimConfig, run_simulation
 
     target = cns_moments()
     bounds = [(0.2, 0.8), (0.2, 0.8)]

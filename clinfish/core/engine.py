@@ -34,13 +34,13 @@ from typing import Any
 
 import numpy as np
 
-from clincast.core.network import (
+from clinfish.core.network import (
     build_patient_network,
     compute_degroot_weights,
     propagate_beliefs,
     network_statistics,
 )
-from clincast.core.vectorized import (
+from clinfish.core.vectorized import (
     PopulationArray,
     STATUS_SCREENING, STATUS_ENROLLED, STATUS_DROPOUT, STATUS_COMPLETED,
     COL_BELIEF, COL_ADHERENCE_PROB, COL_DROPOUT_HAZARD,
@@ -48,14 +48,14 @@ from clincast.core.vectorized import (
     COL_INSTITUTIONAL_TRUST, COL_TRIAL_FATIGUE,
     COL_CONSCIENTIOUSNESS, COL_NEUROTICISM, COL_PERSONAL_CONTROL,
 )
-from clincast.domain.agents import (
+from clinfish.domain.agents import (
     PatientPopulationConfig,
     ArchetypeID,
     ARCHETYPES,
     INSTITUTIONAL_ACTORS,
     InstitutionType,
 )
-from clincast.domain.response import (
+from clinfish.domain.response import (
     dropout_hazard,
     adherence_probability,
     visit_compliance_probability,
@@ -63,14 +63,14 @@ from clincast.domain.response import (
     accumulate_ae_load,
     AE_GRADE_WEIGHT,
 )
-from clincast.domain.stocks import TrialStocks, SiteActivationPipeline
-from clincast.reports.evidence_pack import (
+from clinfish.domain.stocks import TrialStocks, SiteActivationPipeline
+from clinfish.reports.evidence_pack import (
     Tag,
     TaggedValue,
     PatientOutputs,
     TrialOutputs,
 )
-from clincast.social.injection import InjectionEvent, apply_injection
+from clinfish.social.injection import InjectionEvent, apply_injection
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -487,10 +487,10 @@ def run_simulation(config: SimConfig) -> TrialOutputs:
     )
     patient_outputs = _build_patient_outputs(rounds)
 
-    from clincast.core.calibration.moments import get_moments
+    from clinfish.core.calibration.moments import get_moments
     target_moments = get_moments(config.therapeutic_area)
     # Dropout tag: GROUNDED if TA has a primary source, else DIRECTIONAL
-    from clincast.domain.response import TA_DROPOUT_LAMBDA, _DEFAULT_LAMBDA
+    from clinfish.domain.response import TA_DROPOUT_LAMBDA, _DEFAULT_LAMBDA
     ta_source = TA_DROPOUT_LAMBDA.get(config.therapeutic_area, _DEFAULT_LAMBDA)
     dropout_tag = Tag.GROUNDED if ta_source.tag == "GROUNDED" else Tag.DIRECTIONAL
 
@@ -594,7 +594,7 @@ def _empty_round(r: int, t_months: float, stocks: TrialStocks) -> SimulationRoun
 
 
 def _build_patient_outputs(rounds: list[SimulationRound]) -> list[PatientOutputs]:
-    from clincast.domain.response import TA_DROPOUT_LAMBDA
+    from clinfish.domain.response import TA_DROPOUT_LAMBDA
     outputs = []
     for rd in rounds:
         outputs.append(PatientOutputs(
@@ -810,7 +810,7 @@ def _run_llm_swarm(config: SimConfig, n_agents: int = 1000) -> dict:
         high_anxiety_fraction   = sum(1 for b in b_vals if b < p20) / n_v   # bottom quintile
         motivated_fraction      = sum(1 for b in b_vals if b > p80) / n_v   # top quintile
         # Default archetype proportions (from ARCHETYPES) — adjust based on vote distribution
-        from clincast.domain.agents import ArchetypeID
+        from clinfish.domain.agents import ArchetypeID
         default_props = {
             ArchetypeID.TREATMENT_NAIVE_HIGH_ANXIETY: 0.20,
             ArchetypeID.EXPERIENCED_ADVOCATE:         0.15,

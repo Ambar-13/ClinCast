@@ -42,7 +42,7 @@ import numpy as np
 class TargetMoments:
     """Empirical targets the calibration minimizes distance from.
 
-    Clinical moments are documented in clincast/core/calibration/moments.py
+    Clinical moments are documented in clinfish/core/calibration/moments.py
     with full citations. They are passed in here so the SMM framework itself
     stays domain-agnostic.
 

@@ -18,8 +18,8 @@ from __future__ import annotations
 
 import numpy as np
 
-from clincast.core.engine import SimConfig
-from clincast.domain.agents import PatientPopulationConfig, ArchetypeID, ARCHETYPES
+from clinfish.core.engine import SimConfig
+from clinfish.domain.agents import PatientPopulationConfig, ArchetypeID, ARCHETYPES
 
 
 def default(

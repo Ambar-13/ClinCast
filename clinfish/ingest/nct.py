@@ -6,7 +6,7 @@ Uses the v2 REST API (JSON response, no API key required).
 API endpoint: GET https://clinicaltrials.gov/api/v2/studies/{nct_id}
 Documentation: https://clinicaltrials.gov/data-api/api
 
-This module maps the AACT/CT.gov data model to ClinCast's SimConfig fields.
+This module maps the AACT/CT.gov data model to ClinFish's SimConfig fields.
 Unmapped fields are tagged ASSUMED and logged.
 
 References:
@@ -24,7 +24,7 @@ import urllib.error
 import urllib.request
 from typing import Any
 
-from clincast.ingest.protocol import TherapeuticArea, TrialSpec
+from clinfish.ingest.protocol import TherapeuticArea, TrialSpec
 
 logger = logging.getLogger(__name__)
 
@@ -183,7 +183,7 @@ def fetch_nct(nct_id: str) -> dict:
         url,
         headers={
             "Accept": "application/json",
-            "User-Agent": "ClinCast/0.1 (open-source trial simulation; contact via GitHub)",
+            "User-Agent": "ClinFish/0.1 (open-source trial simulation; contact via GitHub)",
         },
     )
 
@@ -238,7 +238,7 @@ def nct_to_sim_params(nct_data: dict) -> dict[str, Any]:
     if study_type.upper() == "OBSERVATIONAL":
         raise ValueError(
             "Study type is OBSERVATIONAL — not a clinical trial. "
-            "ClinCast simulates interventional trials only."
+            "ClinFish simulates interventional trials only."
         )
 
     params: dict[str, Any] = {}
@@ -446,7 +446,7 @@ def lookup_nct(nct_id: str, llm_client: Any = None) -> TrialSpec:
     # Optional LLM enrichment for fields CT.gov doesn't directly provide
     if llm_client is not None:
         try:
-            from clincast.ingest.protocol import extract_with_llm
+            from clinfish.ingest.protocol import extract_with_llm
 
             ps = raw_data.get("protocolSection", {})
             elig_text = ps.get("eligibilityModule", {}).get("eligibilityCriteria", "")

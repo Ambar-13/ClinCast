@@ -54,7 +54,7 @@ async def lookup_nct_id(
     Returns TrialSpec fields as a JSON dict that the frontend can use to
     pre-populate the simulation config form.
     """
-    from clincast.ingest.nct import lookup_nct, NCTNotFoundError, NCTAPIError
+    from clinfish.ingest.nct import lookup_nct, NCTNotFoundError, NCTAPIError
     try:
         spec = lookup_nct(nct_id)
         normalized = nct_id.strip().upper()
@@ -91,7 +91,7 @@ async def lookup_nct_id(
 @router.post("/policy")
 async def apply_policy_endpoint(policy_config: dict):
     """Translate sponsor policy dimensions to SimConfig parameters."""
-    from clincast.ingest.policy import PolicyConfig, apply_policy
+    from clinfish.ingest.policy import PolicyConfig, apply_policy
     try:
         policy = PolicyConfig(
             **{

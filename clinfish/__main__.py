@@ -1,10 +1,10 @@
-"""ClinCast command-line interface.
+"""ClinFish command-line interface.
 
 Usage:
-    clincast simulate --ta cns --patients 400 --sites 20 --rounds 18
-    clincast simulate --ta oncology --patients 500 --sites 25 --rounds 24 --seed 42
-    clincast calibrate --ta cns --lhs 300
-    clincast list-scenarios
+    clinfish simulate --ta cns --patients 400 --sites 20 --rounds 18
+    clinfish simulate --ta oncology --patients 500 --sites 25 --rounds 24 --seed 42
+    clinfish calibrate --ta cns --lhs 300
+    clinfish list-scenarios
 """
 
 from __future__ import annotations
@@ -14,8 +14,8 @@ import json
 import sys
 import time
 
-from clincast.core.engine import SimConfig, run_simulation
-from clincast.scenarios import SCENARIO_REGISTRY, get_scenario
+from clinfish.core.engine import SimConfig, run_simulation
+from clinfish.scenarios import SCENARIO_REGISTRY, get_scenario
 
 
 def cmd_simulate(args: argparse.Namespace) -> None:
@@ -59,7 +59,7 @@ def _print_summary(result, elapsed: float) -> None:
     p = result.rounds[-1] if result.rounds else None
     rounds = result.round_snapshots
 
-    print(f"\nClinCast — {result.therapeutic_area.upper()} Trial Simulation")
+    print(f"\nClinFish — {result.therapeutic_area.upper()} Trial Simulation")
     print("─" * 60)
     print(f"  Patients:          {result.n_patients}")
     print(f"  Sites:             {result.n_sites}")
@@ -99,9 +99,9 @@ def _print_summary(result, elapsed: float) -> None:
 
 
 def cmd_calibrate(args: argparse.Namespace) -> None:
-    from clincast.core.calibration.smm import run_smm, latin_hypercube_sample
-    from clincast.core.calibration.moments import get_moments
-    from clincast.core.engine import SimConfig, run_simulation
+    from clinfish.core.calibration.smm import run_smm, latin_hypercube_sample
+    from clinfish.core.calibration.moments import get_moments
+    from clinfish.core.engine import SimConfig, run_simulation
 
     target = get_moments(args.ta)
     print(f"Calibrating {args.ta} model against {len(target.values)} moments...")
@@ -164,8 +164,8 @@ def cmd_list_scenarios(_args: argparse.Namespace) -> None:
 
 def main() -> None:
     parser = argparse.ArgumentParser(
-        prog="clincast",
-        description="ClinCast: clinical trial behavioral simulation engine",
+        prog="clinfish",
+        description="ClinFish: clinical trial behavioral simulation engine",
     )
     sub = parser.add_subparsers(dest="command", required=True)
 

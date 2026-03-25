@@ -1,4 +1,4 @@
-"""ClinCast FastAPI application."""
+"""ClinFish FastAPI application."""
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -6,7 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from api.routes import simulate, presets, inject, upload, calibrate
 
 app = FastAPI(
-    title="ClinCast",
+    title="ClinFish",
     version="0.1.0",
     description=(
         "Clinical trial behavioral simulation engine. "

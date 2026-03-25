@@ -3,7 +3,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "clincast"
+name = "clinfish"
 version = "0.1.0"
 requires-python = ">=3.11"
 license = { text = "Apache-2.0" }
@@ -28,7 +28,7 @@ dependencies = [
 dev = ["pytest>=8", "pytest-asyncio>=0.23", "ruff>=0.4"]
 
 [project.scripts]
-clincast = "clincast.__main__:main"
+clinfish = "clinfish.__main__:main"
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I"]

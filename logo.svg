@@ -1,25 +1,52 @@
-<svg viewBox="0 0 160 130" width="160" height="130" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <!-- Flask body -->
-  <path d="M60 18v42L38 96a8 8 0 007.2 11.2h65.6A8 8 0 00118 96L96 60V18" stroke="#FED766" strokeWidth="5" strokeLinecap="round" strokeLinejoin="round"/>
-  <!-- Flask top bar -->
-  <path d="M54 18h48" stroke="#FED766" strokeWidth="5" strokeLinecap="round"/>
-  <!-- Liquid bubbles in flask -->
-  <circle cx="62" cy="90" r="6" fill="#07A0C3" opacity="0.9"/>
-  <circle cx="80" cy="98" r="4.5" fill="#07A0C3" opacity="0.7"/>
-  <circle cx="94" cy="88" r="5" fill="#07A0C3" opacity="0.8"/>
+<svg viewBox="0 0 200 150" width="200" height="150" fill="none" xmlns="http://www.w3.org/2000/svg">
 
-  <!-- Robot: antenna wire -->
-  <line x1="136" y1="56" x2="136" y2="44" stroke="#07A0C3" strokeWidth="3.5" strokeLinecap="round"/>
-  <!-- Antenna tip dot -->
-  <circle cx="136" cy="40" r="5" fill="#07A0C3"/>
+  <!-- Flask body -->
+  <path d="M76 20v42L50 105a8 8 0 007 11h60a8 8 0 007-11L98 62V20"
+        stroke="#FED766" strokeWidth="5" strokeLinecap="round" strokeLinejoin="round"/>
+  <!-- Flask neck top bar -->
+  <path d="M69 20h36" stroke="#FED766" strokeWidth="5" strokeLinecap="round"/>
+
+  <!-- Pill capsule falling into flask opening (tilted ~25deg) -->
+  <g transform="translate(87,30) rotate(25)">
+    <!-- Teal half -->
+    <rect x="-14" y="-5.5" width="14" height="11" rx="0" fill="#07A0C3" opacity="0.95"/>
+    <path d="M-14,-5.5 a5.5,5.5 0 0,0 0,11 z" fill="#07A0C3" opacity="0.95"/>
+    <!-- White half -->
+    <rect x="0" y="-5.5" width="14" height="11" rx="0" fill="white" opacity="0.92"/>
+    <path d="M14,-5.5 a5.5,5.5 0 0,1 0,11 z" fill="white" opacity="0.92"/>
+    <!-- Seam line -->
+    <line x1="0" y1="-5.5" x2="0" y2="5.5" stroke="#07A0C3" strokeWidth="1"/>
+  </g>
+
+  <!-- Flask liquid bubbles -->
+  <circle cx="66"  cy="92" r="6"   fill="#07A0C3" opacity="0.9"/>
+  <circle cx="84"  cy="101" r="4.5" fill="#07A0C3" opacity="0.7"/>
+  <circle cx="98"  cy="90" r="5"   fill="#07A0C3" opacity="0.85"/>
+
+  <!-- Medical plus sign (floating top-left of flask, red cross style) -->
+  <rect x="38" y="22" width="5.5" height="18" rx="2" fill="#e84040" opacity="0.9"/>
+  <rect x="32" y="28" width="18"  height="5.5" rx="2" fill="#e84040" opacity="0.9"/>
+
+  <!-- Robot antenna wire -->
+  <line x1="157" y1="58" x2="157" y2="44" stroke="#07A0C3" strokeWidth="3.5" strokeLinecap="round"/>
+  <!-- Antenna tip -->
+  <circle cx="157" cy="40" r="5" fill="#07A0C3"/>
+
   <!-- Robot head -->
-  <rect x="116" y="56" width="40" height="34" rx="8" fill="#07A0C3"/>
+  <rect x="136" y="58" width="42" height="36" rx="9" fill="#07A0C3"/>
+
   <!-- Eyes (white) -->
-  <circle cx="128" cy="72" r="5.5" fill="white" opacity="0.95"/>
-  <circle cx="148" cy="72" r="5.5" fill="white" opacity="0.95"/>
+  <circle cx="149" cy="74" r="5.5" fill="white" opacity="0.95"/>
+  <circle cx="166" cy="74" r="5.5" fill="white" opacity="0.95"/>
   <!-- Pupils -->
-  <circle cx="129.5" cy="73" r="2.5" fill="#086788"/>
-  <circle cx="149.5" cy="73" r="2.5" fill="#086788"/>
+  <circle cx="150.5" cy="75" r="2.5" fill="#086788"/>
+  <circle cx="167.5" cy="75" r="2.5" fill="#086788"/>
+
   <!-- Smile -->
-  <path d="M126 82 Q136 88 150 82" stroke="white" strokeWidth="2.5" strokeLinecap="round" fill="none" opacity="0.75"/>
+  <path d="M147 85 Q157.5 91 169 85" stroke="white" strokeWidth="2.5" strokeLinecap="round" fill="none" opacity="0.75"/>
+
+  <!-- Small white medical cross on robot forehead -->
+  <rect x="155" y="61" width="3.5" height="10" rx="1.5" fill="white" opacity="0.85"/>
+  <rect x="151" y="64.5" width="11.5" height="3.5" rx="1.5" fill="white" opacity="0.85"/>
+
 </svg>

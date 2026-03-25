@@ -7,8 +7,8 @@ but sanity checks that the model is in the right ballpark.
 
 import pytest
 
-from clincast.scenarios import get_scenario
-from clincast.core.engine import run_simulation
+from clinfish.scenarios import get_scenario
+from clinfish.core.engine import run_simulation
 
 
 def _run(ta: str, n: int = 300, sites: int = 15, rounds: int = 18, seed: int = 0):

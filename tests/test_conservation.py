@@ -6,8 +6,8 @@ N_screening + N_enrolled + N_dropout + N_completed = N_total at all times.
 
 import pytest
 
-from clincast.core.engine import SimConfig, run_simulation
-from clincast.scenarios import get_scenario
+from clinfish.core.engine import SimConfig, run_simulation
+from clinfish.scenarios import get_scenario
 
 
 def _run(ta: str, n: int = 100, sites: int = 5, rounds: int = 12, seed: int = 7) -> object:

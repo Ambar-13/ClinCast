@@ -195,17 +195,17 @@ export default function SimulatePage() {
 
   // Restore persisted values client-side only (after hydration) to avoid mismatch
   useEffect(() => {
-    const swarm  = localStorage.getItem("clincast_swarm");
-    const agents = localStorage.getItem("clincast_nagents");
-    const key    = localStorage.getItem("clincast_openai_key");
+    const swarm  = localStorage.getItem("clinfish_swarm");
+    const agents = localStorage.getItem("clinfish_nagents");
+    const key    = localStorage.getItem("clinfish_openai_key");
     if (swarm  !== null) setUseSwarm(swarm !== "false");
     if (agents !== null) setNAgents(+agents);
     if (key    !== null) setApiKey(key);
   }, []);
 
-  useEffect(() => { localStorage.setItem("clincast_openai_key", apiKey); }, [apiKey]);
-  useEffect(() => { localStorage.setItem("clincast_swarm",      String(useSwarm)); }, [useSwarm]);
-  useEffect(() => { localStorage.setItem("clincast_nagents",    String(nAgents)); }, [nAgents]);
+  useEffect(() => { localStorage.setItem("clinfish_openai_key", apiKey); }, [apiKey]);
+  useEffect(() => { localStorage.setItem("clinfish_swarm",      String(useSwarm)); }, [useSwarm]);
+  useEffect(() => { localStorage.setItem("clinfish_nagents",    String(nAgents)); }, [nAgents]);
   const [result,    setResult]    = useState<SimulateResponse | null>(null);
   const [loading,   setLoading]   = useState(false);
   const [error,     setError]     = useState<string | null>(null);

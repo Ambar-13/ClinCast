@@ -1,5 +1,5 @@
 """
-ClinCast — open-source clinical trial behavioral simulation engine.
+ClinFish — open-source clinical trial behavioral simulation engine.
 
 Two simulation modes:
   vectorized  Fast numpy baseline (~2s / 1000 patients). Fully offline.

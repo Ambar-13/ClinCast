@@ -5,7 +5,7 @@ Each dimension has a range [min, max] and a default. The mapping uses
 linear interpolation with clinical anchors where available.
 
 IMPORTANT: This layer is a useful LOOKUP TABLE, not novel IP. The core IP
-of ClinCast is the GROUNDED/DIRECTIONAL/ASSUMED tagging + SMM calibration
+of ClinFish is the GROUNDED/DIRECTIONAL/ASSUMED tagging + SMM calibration
 pipeline. This module is additive utility.
 
 All mappings are tagged per the epistemic framework:

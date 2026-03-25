@@ -1,7 +1,7 @@
 <div align="center">
-  <img src="https://raw.githubusercontent.com/Ambar-13/ClinCast/master/logo.svg" alt="ClinCast" width="160" height="130"/>
+  <img src="https://raw.githubusercontent.com/Ambar-13/ClinFish/master/logo.svg" alt="ClinFish" width="160" height="130"/>
 
-  <h1>ClinCast</h1>
+  <h1>ClinFish</h1>
 
   <p>A behavioral simulation engine for clinical trials.<br/>
   Model enrollment, dropout, adherence, and site dynamics — grounded in published clinical literature.</p>
@@ -16,7 +16,7 @@
 
 Clinical trials fail in predictable ways. Enrollment falls behind. Patients drop out earlier than anticipated. Sites that looked great on paper activate months late and enroll almost nobody. These failures are expensive — and many of them could have been caught with a better model.
 
-ClinCast is a simulation engine that tries to capture this. It models individual patients (not just averages), realistic site activation timelines, social network effects on belief and trust, and the behavioral personality traits that actually predict whether someone finishes a trial. Every number in the model is tagged with how confident we are in it — grounded in data, directional from theory, or just an assumption that needs testing.
+ClinFish is a simulation engine that tries to capture this. It models individual patients (not just averages), realistic site activation timelines, social network effects on belief and trust, and the behavioral personality traits that actually predict whether someone finishes a trial. Every number in the model is tagged with how confident we are in it — grounded in data, directional from theory, or just an assumption that needs testing.
 
 ---
 
@@ -56,7 +56,7 @@ The main simulation loop is vectorized with numpy — all 500–5000 patients ar
 
 ### Competing-risks dropout
 
-Most trial simulators model dropout as a single event. ClinCast separates it into cause-specific hazards drawn from CATIE Phase 1 (Lieberman et al., *NEJM*, 2005; n=1,493): efficacy failure (24%), intolerability (15%), patient decision (30%), administrative (5%), non-medical (26%). The total hazard drives the dropout timing; the cause proportions drive which bucket the patient lands in.
+Most trial simulators model dropout as a single event. ClinFish separates it into cause-specific hazards drawn from CATIE Phase 1 (Lieberman et al., *NEJM*, 2005; n=1,493): efficacy failure (24%), intolerability (15%), patient decision (30%), administrative (5%), non-medical (26%). The total hazard drives the dropout timing; the cause proportions drive which bucket the patient lands in.
 
 The dropout time distribution uses Weibull survival, with shape parameter κ calibrated per therapeutic area. Empirical anchors: AVID trial (cardiology, κ=0.70), MADIT-II (κ=1.01), SCD-HeFT (κ=1.08), pediatric oncology (κ=1.37, SE=0.28). For trials longer than 12 months, κ > 1 is the more empirically likely regime.
 
@@ -84,7 +84,7 @@ Sites don't just appear — they go through contracting, IRB review, and readine
 Three Big Five traits meaningfully predict medication adherence and are included in the model:
 
 - **Conscientiousness** — the strongest predictor. Molloy et al. (2014, *Annals of Behavioral Medicine*; 16 studies, n=3,476) found r=0.149 for medication adherence specifically. With 50% archetype overlap correction, β_C = 0.08.
-- **Neuroticism** — associated with lower adherence. Axelsson et al. (*West Sweden Study*, PMC3065484) found β=−0.029 in a multivariate model. ClinCast uses β_N = 0.05.
+- **Neuroticism** — associated with lower adherence. Axelsson et al. (*West Sweden Study*, PMC3065484) found β=−0.029 in a multivariate model. ClinFish uses β_N = 0.05.
 - **Personal Control (IPQ-R)** — illness-specific perceived controllability. Brandes & Mullan (2014, *Health Psychology Review*; 30 CSM studies) found r=0.12 for adherence. β_PC = 0.06.
 
 Openness, Agreeableness, and Extraversion are excluded. The evidence for their direct adherence effects is too weak to justify the added dimensionality.
@@ -96,8 +96,8 @@ Openness, Agreeableness, and Extraversion are excluded. The evidence for their d
 **Requirements:** Python 3.11+, pip.
 
 ```bash
-git clone https://github.com/Ambar-13/ClinCast.git
-cd ClinCast
+git clone https://github.com/Ambar-13/ClinFish.git
+cd ClinFish
 pip install -e ".[dev]"
 ```
 
@@ -120,7 +120,7 @@ The API docs are at `http://localhost:8000/docs`.
 **Quick simulation via Python:**
 
 ```python
-from clincast.core.engine import run_simulation, SimConfig
+from clinfish.core.engine import run_simulation, SimConfig
 
 config = SimConfig(
     n_patients=500,
@@ -156,7 +156,7 @@ You can also compare two scenarios side by side (e.g., standard protocol vs. dec
 
 ## Patient archetypes
 
-Rather than drawing patients from a featureless distribution, ClinCast synthesizes five archetypes that reflect documented variation in trial populations:
+Rather than drawing patients from a featureless distribution, ClinFish synthesizes five archetypes that reflect documented variation in trial populations:
 
 | Archetype | Description | Key traits |
 |---|---|---|
@@ -180,13 +180,13 @@ Every numerical constant in the behavioral model carries one of three tags:
 
 **`[ASSUMED]`** — no strong empirical anchor. The docstring names the range for the sensitivity sweep.
 
-This tagging system is the core IP of ClinCast. It makes the epistemic status of every parameter explicit and auditable, rather than hiding it in a configuration file.
+This tagging system is the core IP of ClinFish. It makes the epistemic status of every parameter explicit and auditable, rather than hiding it in a configuration file.
 
 ---
 
 ## Calibration
 
-ClinCast uses Simulated Method of Moments (SMM) calibration, following Lamperti, Roventini & Sani (*Journal of Economic Dynamics and Control*, 2018, Vol. 90, pp. 366–389). The approach:
+ClinFish uses Simulated Method of Moments (SMM) calibration, following Lamperti, Roventini & Sani (*Journal of Economic Dynamics and Control*, 2018, Vol. 90, pp. 366–389). The approach:
 
 1. **Latin hypercube sampling** — draw 200–500 parameter vectors from the prior space.
 2. **Simulate** — run the vectorized simulator at each draw and compute six target moments (enrollment velocity, dropout rate, adherence mean/variance, site activation curve, AE rate).
@@ -208,7 +208,7 @@ Model fit is assessed with Theil's inequality decomposition (Theil, 1961; Sterma
 
 ## NCT auto-fill
 
-Pass an NCT ID and ClinCast will look up the trial on ClinicalTrials.gov (v2 API) and auto-populate the simulation config:
+Pass an NCT ID and ClinFish will look up the trial on ClinicalTrials.gov (v2 API) and auto-populate the simulation config:
 
 ```bash
 GET /simulate/nct/NCT04280705
@@ -258,8 +258,8 @@ The full interactive docs are at `/docs` after starting the server.
 ## Project structure
 
 ```
-ClinCast/
-├── clincast/
+ClinFish/
+├── clinfish/
 │   ├── core/
 │   │   ├── engine.py          # Main simulation loop
 │   │   ├── vectorized.py      # Numpy patient population arrays

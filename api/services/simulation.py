@@ -6,10 +6,10 @@ import dataclasses
 import os
 import time
 
-from clincast.core.engine import SimConfig, run_simulation, SimulationRound
-from clincast.reports.evidence_pack import TrialOutputs, TaggedValue
-from clincast.scenarios import SCENARIO_REGISTRY
-from clincast.social.injection import InjectionEvent, InjectionValence
+from clinfish.core.engine import SimConfig, run_simulation, SimulationRound
+from clinfish.reports.evidence_pack import TrialOutputs, TaggedValue
+from clinfish.scenarios import SCENARIO_REGISTRY
+from clinfish.social.injection import InjectionEvent, InjectionValence
 
 from api.schemas.request import SimulateRequest, InjectionEventSchema
 from api.schemas.response import (

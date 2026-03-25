@@ -16,8 +16,8 @@ References:
 import pytest
 import numpy as np
 
-from clincast.core.engine import SimConfig, run_simulation
-from clincast.domain.agents import PatientPopulationConfig
+from clinfish.core.engine import SimConfig, run_simulation
+from clinfish.domain.agents import PatientPopulationConfig
 
 
 def _config(
@@ -158,8 +158,8 @@ def test_data_quality_bounded():
 # ── Test 9: Theil U — SMM distance at target should give UC ≈ 1 ───────────────
 
 def test_theil_u_at_exact_match():
-    from clincast.core.calibration.smm import SimulatedMoments
-    from clincast.core.calibration.moments import cns_moments
+    from clinfish.core.calibration.smm import SimulatedMoments
+    from clinfish.core.calibration.moments import cns_moments
     import numpy as np
 
     target = cns_moments()
@@ -170,8 +170,8 @@ def test_theil_u_at_exact_match():
 
 
 def test_theil_u_decomposes_to_one():
-    from clincast.core.calibration.smm import SimulatedMoments
-    from clincast.core.calibration.moments import cns_moments
+    from clinfish.core.calibration.smm import SimulatedMoments
+    from clinfish.core.calibration.moments import cns_moments
     import numpy as np
 
     target = cns_moments()

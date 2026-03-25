@@ -2,7 +2,7 @@
 
 ESTIMAND CONTEXT (ICH E9(R1), FDA November 2019)
 ──────────────────────────────────────────────────
-ClinCast outputs correspond to the ICH E9(R1) "treatment policy" estimand
+ClinFish outputs correspond to the ICH E9(R1) "treatment policy" estimand
 (Section 3.2.1): behavior of the assigned-treatment population regardless
 of adherence or intercurrent events (ITT-aligned). Dropout and adherence
 outputs are also interpretable as "while on treatment" estimands (Section
@@ -12,7 +12,7 @@ the epistemic provenance required for FDA Model-Informed Drug Development
 
 FDA MIDD QUALIFICATION
 ───────────────────────
-ClinCast qualifies structurally as a MIDD-compliant simulation tool under
+ClinFish qualifies structurally as a MIDD-compliant simulation tool under
 the FDA Center for Drug Evaluation and Research (CDER) MIDD program (2017):
   - Mechanistic model with transparent parameter sourcing (all GROUNDED/
     DIRECTIONAL/ASSUMED tags with citations)

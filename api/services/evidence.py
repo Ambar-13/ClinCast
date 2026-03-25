@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from clincast.core.calibration.moments import MOMENT_REGISTRY, get_moments
-from clincast.scenarios import SCENARIO_REGISTRY
+from clinfish.core.calibration.moments import MOMENT_REGISTRY, get_moments
+from clinfish.scenarios import SCENARIO_REGISTRY
 
 from api.schemas.response import PresetResponse
 

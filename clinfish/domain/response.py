@@ -128,7 +128,7 @@ ICH E9(R1) strategies for handling intercurrent events are:
   4. Principal stratum  — restrict to patients who would/would not have
                           the intercurrent event under each treatment
   5. Composite         — define intercurrent event itself as part of outcome
-ClinCast outputs are most directly interpretable as treatment-policy
+ClinFish outputs are most directly interpretable as treatment-policy
 (strategy 1) and while-on-treatment (strategy 3) estimands. To address
 hypothetical estimands, the simulator would need a counterfactual module.
 [GROUNDED — regulatory context; not a model change]
@@ -176,8 +176,8 @@ from typing import NamedTuple
 
 import numpy as np
 
-from clincast.domain.agents import ArchetypeID, ARCHETYPES
-from clincast.ingest.protocol import TherapeuticArea
+from clinfish.domain.agents import ArchetypeID, ARCHETYPES
+from clinfish.ingest.protocol import TherapeuticArea
 
 
 # ─────────────────────────────────────────────────────────────────────────────

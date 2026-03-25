@@ -13,9 +13,9 @@
   [![Next.js](https://img.shields.io/badge/Next.js-15-086788.svg)](https://nextjs.org)
 </div>
 
-| Configure | Results | Results |
+| Configure | Simulation results | Agent decision map |
 |---|---|---|
-| ![ClinFish configure](docs/ui.png) | ![ClinFish results](docs/ui-results.png) | ![ClinFish simulation](docs/ui-simulation.png) |
+| ![Configure](docs/ui.png) | ![Results](docs/ui-results.png) | ![Agents](docs/ui-agents.jpg) |
 
 ---
 

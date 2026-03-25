@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="https://raw.githubusercontent.com/Ambar-13/ClinCast/master/frontend/src/app/icon.svg" alt="ClinCast" width="80" height="80"/>
+  <img src="https://raw.githubusercontent.com/Ambar-13/ClinCast/master/logo.svg" alt="ClinCast" width="160" height="130"/>
 
   <h1>ClinCast</h1>
 

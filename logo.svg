@@ -1,0 +1,25 @@
+<svg viewBox="0 0 160 130" width="160" height="130" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Flask body -->
+  <path d="M60 18v42L38 96a8 8 0 007.2 11.2h65.6A8 8 0 00118 96L96 60V18" stroke="#FED766" strokeWidth="5" strokeLinecap="round" strokeLinejoin="round"/>
+  <!-- Flask top bar -->
+  <path d="M54 18h48" stroke="#FED766" strokeWidth="5" strokeLinecap="round"/>
+  <!-- Liquid bubbles in flask -->
+  <circle cx="62" cy="90" r="6" fill="#07A0C3" opacity="0.9"/>
+  <circle cx="80" cy="98" r="4.5" fill="#07A0C3" opacity="0.7"/>
+  <circle cx="94" cy="88" r="5" fill="#07A0C3" opacity="0.8"/>
+
+  <!-- Robot: antenna wire -->
+  <line x1="136" y1="56" x2="136" y2="44" stroke="#07A0C3" strokeWidth="3.5" strokeLinecap="round"/>
+  <!-- Antenna tip dot -->
+  <circle cx="136" cy="40" r="5" fill="#07A0C3"/>
+  <!-- Robot head -->
+  <rect x="116" y="56" width="40" height="34" rx="8" fill="#07A0C3"/>
+  <!-- Eyes (white) -->
+  <circle cx="128" cy="72" r="5.5" fill="white" opacity="0.95"/>
+  <circle cx="148" cy="72" r="5.5" fill="white" opacity="0.95"/>
+  <!-- Pupils -->
+  <circle cx="129.5" cy="73" r="2.5" fill="#086788"/>
+  <circle cx="149.5" cy="73" r="2.5" fill="#086788"/>
+  <!-- Smile -->
+  <path d="M126 82 Q136 88 150 82" stroke="white" strokeWidth="2.5" strokeLinecap="round" fill="none" opacity="0.75"/>
+</svg>

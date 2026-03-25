@@ -7,10 +7,13 @@
   Model enrollment, dropout, adherence, and site dynamics — grounded in published clinical literature.</p>
 
   [![License](https://img.shields.io/badge/license-Apache%202.0-086788.svg)](LICENSE)
+  [![Version](https://img.shields.io/badge/version-1.0.0-086788.svg)](https://github.com/Ambar-13/ClinFish/releases/tag/v1.0)
   [![Python](https://img.shields.io/badge/python-3.11%2B-07A0C3.svg)](https://python.org)
   [![FastAPI](https://img.shields.io/badge/FastAPI-0.111-07A0C3.svg)](https://fastapi.tiangolo.com)
   [![Next.js](https://img.shields.io/badge/Next.js-15-086788.svg)](https://nextjs.org)
 </div>
+
+![ClinFish UI](docs/ui.png)
 
 ---
 
@@ -44,7 +47,7 @@ ClinFish is useful anywhere someone needs to reason about what happens *inside* 
 
 **Developers building clinical tools** — open API, Apache 2.0 license. Use it as a backend for feasibility dashboards, protocol optimization tools, or trial planning platforms.
 
-ClinFish is not a regulatory submission tool and makes no clinical recommendations. It is a modeling framework — the quality of outputs depends entirely on the quality of assumptions fed in, and those assumptions are made explicit for exactly that reason.
+ClinFish is not a regulatory submission tool — it is built to simulate.
 
 ---
 

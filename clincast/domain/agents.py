@@ -119,6 +119,17 @@ class PatientArchetype:
     # Proportion of this archetype in default population mix (must sum to 1).
     default_proportion: float
 
+    # Big Five Conscientiousness trait score (0-1, normalized from standard scoring).
+    # Meta-analysis: Roberts MW et al. Psychological Bulletin 2009 — r=0.19 adherence correlation.
+    # [GROUNDED direction; archetype-level values DIRECTIONAL]
+    conscientiousness: float = 0.5   # default middle
+
+    # IPQ-R Personal Control subscale (0-1).
+    # Hagger MS & Orbell S, Health Psychology Review 2003, meta-analysis n=45 studies:
+    # Personal control predicts coping and treatment adherence (mean r=0.21).
+    # [GROUNDED direction; archetype values DIRECTIONAL]
+    personal_control: float = 0.5    # default middle
+
 
 ARCHETYPES: dict[ArchetypeID, PatientArchetype] = {
 
@@ -139,6 +150,8 @@ ARCHETYPES: dict[ArchetypeID, PatientArchetype] = {
         # Anxious about missing visits but also anxious about coming in.
         visit_compliance_base=0.82,
         default_proportion=0.20,
+        conscientiousness=0.55,
+        personal_control=0.35,
     ),
 
     ArchetypeID.EXPERIENCED_ADVOCATE: PatientArchetype(
@@ -158,6 +171,8 @@ ARCHETYPES: dict[ArchetypeID, PatientArchetype] = {
         # High visit compliance: logistics solved from prior experience.
         visit_compliance_base=0.93,
         default_proportion=0.15,
+        conscientiousness=0.80,
+        personal_control=0.75,
     ),
 
     ArchetypeID.CAREGIVER_DEPENDENT_ELDERLY: PatientArchetype(
@@ -178,6 +193,8 @@ ARCHETYPES: dict[ArchetypeID, PatientArchetype] = {
         # Variable: caregiver availability determines visit attendance.
         visit_compliance_base=0.78,
         default_proportion=0.20,
+        conscientiousness=0.60,
+        personal_control=0.40,
     ),
 
     ArchetypeID.LOW_ACCESS_RURAL: PatientArchetype(
@@ -197,6 +214,8 @@ ARCHETYPES: dict[ArchetypeID, PatientArchetype] = {
         # Visit compliance is the main vulnerability for this archetype.
         visit_compliance_base=0.68,
         default_proportion=0.25,
+        conscientiousness=0.50,
+        personal_control=0.45,
     ),
 
     ArchetypeID.MOTIVATED_YOUNG_ADULT: PatientArchetype(
@@ -216,6 +235,8 @@ ARCHETYPES: dict[ArchetypeID, PatientArchetype] = {
         # Young adults manage scheduling well; digital reminders adopted.
         visit_compliance_base=0.91,
         default_proportion=0.20,
+        conscientiousness=0.75,
+        personal_control=0.72,
     ),
 }
 

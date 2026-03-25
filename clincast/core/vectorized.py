@@ -29,12 +29,10 @@ for the small persona-agent swarm layer.
 from __future__ import annotations
 
 import dataclasses
-from typing import TYPE_CHECKING
 
 import numpy as np
 
-if TYPE_CHECKING:
-    from clincast.domain.agents import PatientPopulationConfig
+from clincast.domain.agents import PatientPopulationConfig, ARCHETYPES, ArchetypeID
 
 
 # Column indices — kept as named constants so array access is readable
@@ -44,14 +42,18 @@ COL_DROPOUT_HAZARD  = 2
 COL_CUMULATIVE_AE   = 3
 COL_VISIT_BURDEN    = 4
 COL_STATUS          = 5
+COL_INSTITUTIONAL_TRUST = 6   # slow-updating sponsor trust (information stock)
+COL_TRIAL_FATIGUE       = 7   # accumulating fatigue stock (inflow: visits+AEs, outflow: recovery)
+COL_CONSCIENTIOUSNESS   = 8   # Big Five Conscientiousness trait [GROUNDED: Roberts 2009 meta r=0.19]
+COL_PERSONAL_CONTROL    = 9   # IPQ-R Personal Control subscale [GROUNDED: Hagger & Orbell 2003]
+COL_ADHERENCE_STATE     = 10  # Markov adherence state: 0=holiday, 1=taking [GROUNDED: Vrijens 2008]
+N_COLS = 11
 
 # Status codes
 STATUS_SCREENING  = 0.0
 STATUS_ENROLLED   = 1.0
 STATUS_DROPOUT    = 2.0
 STATUS_COMPLETED  = 3.0
-
-N_COLS = 6
 
 
 @dataclasses.dataclass
@@ -69,7 +71,7 @@ class PopulationArray:
     @classmethod
     def generate(
         cls,
-        config: "PatientPopulationConfig",
+        config: PatientPopulationConfig,
         seed: int = 0,
     ) -> "PopulationArray":
         """Draw a heterogeneous patient population from the config distributions.
@@ -117,6 +119,29 @@ class PopulationArray:
         # Age: normal centred at config.mean_age with SD 12, clipped to [18, 90]
         age = rng.normal(config.mean_age, 12.0, size=n).astype(np.float32)
         age = np.clip(age, 18.0, 90.0)
+
+        # Initial institutional trust drawn from same prior as belief (can diverge later)
+        state[:, COL_INSTITUTIONAL_TRUST] = state[:, COL_BELIEF].copy()
+
+        # Trial fatigue starts at 0 (builds during trial)
+        state[:, COL_TRIAL_FATIGUE] = 0.0
+
+        # Conscientiousness: Beta(2.5, 2.5) centered at 0.5, slight positive skew for trial enrollees
+        # Roberts et al. (2009) meta-analysis: Conscientiousness r=0.19 with adherence
+        # [GROUNDED direction; Beta parameterization ASSUMED]
+        state[:, COL_CONSCIENTIOUSNESS] = rng.beta(2.5, 2.5, size=n).astype(np.float32)
+
+        # Personal Control (IPQ-R): Beta(3, 2) mean=0.6 — trial enrollees self-select for agency
+        # Hagger & Orbell (2003) meta: IPQ-R personal control r=0.21 with coping/adherence
+        # [GROUNDED direction; prior ASSUMED]
+        state[:, COL_PERSONAL_CONTROL] = rng.beta(3.0, 2.0, size=n).astype(np.float32)
+
+        # Initial adherence state: Bernoulli(archetype_adherence_prob) for each patient
+        # Vrijens et al. BMJ 2008: ~50% in non-persistence by 1 year but execution rate ~90%
+        # Initialize most patients as "taking" (adherence_state=1)
+        adherence_init_probs = np.array([ARCHETYPES[ArchetypeID(i)].baseline_adherence for i in range(len(ArchetypeID))])
+        patient_adherence_probs = adherence_init_probs[archetype_ids.astype(np.int8)]
+        state[:, COL_ADHERENCE_STATE] = rng.random(n).astype(np.float32) < patient_adherence_probs
 
         return cls(
             state=state,

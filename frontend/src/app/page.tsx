@@ -1,14 +1,173 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { ArrowRight, Brain, KeyRound, Play } from "lucide-react";
+import { ArrowRight, Brain, ChevronDown, ChevronUp, KeyRound, Play } from "lucide-react";
 import { AppShell } from "@/components/layout/AppShell";
 import { TrialConfigPanel } from "@/components/simulation/TrialConfigPanel";
 import { TrialResultsPanel } from "@/components/simulation/TrialResultsPanel";
 import { ProtocolUpload } from "@/components/simulation/ProtocolUpload";
 import { AgentNetworkIdle } from "@/components/ui/AgentNetworkIdle";
 import { ScrambleText } from "@/components/ui/ScrambleText";
-import { simulate, SimulateRequest, SimulateResponse } from "@/lib/api";
+import { simulate, applyPolicy, SimulateRequest, SimulateResponse } from "@/lib/api";
+
+// ── Policy Panel ──────────────────────────────────────────────────────────────
+
+interface PolicySliderDef {
+  key: string;
+  label: string;
+  hint: string;
+  preview: (v: number) => string;
+}
+
+const POLICY_SLIDERS: PolicySliderDef[] = [
+  {
+    key:     "patient_support_investment",
+    label:   "Patient Support Investment",
+    hint:    "None → Full coordinators + transport",
+    preview: (v) => `enrollment_rate_modifier: ${(1 + v * 0.5).toFixed(2)}×`,
+  },
+  {
+    key:     "protocol_complexity",
+    label:   "Protocol Complexity",
+    hint:    "Minimal burden → Highly complex",
+    preview: (v) => `protocol_burden: ${v.toFixed(2)}`,
+  },
+  {
+    key:     "site_proximity_strategy",
+    label:   "Site Proximity Strategy",
+    hint:    "Academic centers → Community sites",
+    preview: (v) => `site_quality_variance: ${v < 0.4 ? "low" : v < 0.7 ? "medium" : "high"}`,
+  },
+  {
+    key:     "burden_reduction_priority",
+    label:   "Burden Reduction Priority",
+    hint:    "Standard → DCT/Decentralized",
+    preview: (v) => `visit_burden_modifier: ${(1 - v * 0.4).toFixed(2)}×`,
+  },
+  {
+    key:     "competitive_urgency",
+    label:   "Competitive Urgency",
+    hint:    "No competition → Race to market",
+    preview: (v) => `competitive_pressure: ${v < 0.25 ? "none" : v < 0.5 ? "low" : v < 0.75 ? "medium" : "high"}`,
+  },
+];
+
+interface PolicyPanelProps {
+  onApply: (patch: Partial<SimulateRequest>) => void;
+}
+
+function PolicyPanel({ onApply }: PolicyPanelProps) {
+  const [open,    setOpen]    = useState(false);
+  const [values,  setValues]  = useState<Record<string, number>>(() =>
+    Object.fromEntries(POLICY_SLIDERS.map((s) => [s.key, 0.5]))
+  );
+  const [loading, setLoading] = useState(false);
+  const [error,   setError]   = useState<string | null>(null);
+  const [applied, setApplied] = useState(false);
+
+  function setVal(key: string, v: number) {
+    setValues((prev) => ({ ...prev, [key]: v }));
+    setApplied(false);
+  }
+
+  async function apply() {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await applyPolicy(values);
+      // Map returned params to SimulateRequest patch
+      const patch: Partial<SimulateRequest> = {};
+      for (const [k, v] of Object.entries(res.params)) {
+        if (k in ({} as SimulateRequest)) {
+          (patch as Record<string, unknown>)[k] = v;
+        }
+      }
+      onApply(patch);
+      setApplied(true);
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <div className="card-warm overflow-hidden">
+      <button
+        type="button"
+        onClick={() => setOpen(!open)}
+        className="flex w-full items-center justify-between px-4 py-3"
+      >
+        <div>
+          <p className="text-sm font-medium text-left" style={{ color: "var(--ink-700)" }}>
+            Sponsor Policy Override
+          </p>
+          <p className="text-[11px] text-left mt-0.5" style={{ color: "var(--ink-400)" }}>
+            High-level sliders that adjust trial parameters
+          </p>
+        </div>
+        {open
+          ? <ChevronUp size={14} style={{ color: "var(--ink-400)", flexShrink: 0 }} />
+          : <ChevronDown size={14} style={{ color: "var(--ink-400)", flexShrink: 0 }} />}
+      </button>
+
+      {open && (
+        <div className="border-t px-4 pb-4 pt-3 space-y-4"
+          style={{ borderColor: "var(--border-warm)", background: "var(--cream-200)" }}>
+          {POLICY_SLIDERS.map((s) => (
+            <div key={s.key}>
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-[11px] font-medium" style={{ color: "var(--ink-600)" }}>{s.label}</span>
+                <span className="text-xs font-semibold font-mono" style={{ color: "var(--crimson-700)" }}>
+                  {values[s.key].toFixed(2)}
+                </span>
+              </div>
+              <input
+                type="range" min={0} max={1} step={0.01}
+                value={values[s.key]}
+                onChange={(e) => setVal(s.key, parseFloat(e.target.value))}
+                className="w-full accent-[var(--crimson-700)] h-1.5 cursor-pointer"
+              />
+              <div className="flex items-center justify-between mt-0.5">
+                <p className="text-[10px]" style={{ color: "var(--ink-400)" }}>{s.hint}</p>
+                <span className="font-mono text-[9px] rounded px-1.5 py-0.5"
+                  style={{ background: "rgba(139,26,26,0.07)", color: "var(--crimson-700)", border: "1px solid rgba(139,26,26,0.12)" }}>
+                  {s.preview(values[s.key])}
+                </span>
+              </div>
+            </div>
+          ))}
+
+          {error && (
+            <p className="text-[11px] rounded px-2 py-1.5"
+              style={{ color: "#dc2626", background: "rgba(220,38,38,0.08)", border: "1px solid rgba(220,38,38,0.2)" }}>
+              {error}
+            </p>
+          )}
+
+          <button
+            type="button"
+            onClick={apply}
+            disabled={loading}
+            className="btn-primary w-full py-2 text-sm"
+          >
+            {loading ? (
+              <>
+                <svg className="animate-spin h-3.5 w-3.5" viewBox="0 0 24 24" fill="none">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                </svg>
+                Applying policy…
+              </>
+            ) : applied ? "Policy applied ✓" : "Apply Policy"}
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Page defaults ─────────────────────────────────────────────────────────────
 
 const DEFAULT: SimulateRequest = {
   therapeutic_area:      "cns",
@@ -91,6 +250,9 @@ export default function SimulatePage() {
             />
 
             <TrialConfigPanel value={req} onChange={setReq} />
+
+            {/* Policy panel */}
+            <PolicyPanel onApply={(patch) => setReq((prev) => ({ ...prev, ...patch }))} />
 
             {/* Swarm toggle */}
             <div className="card-warm overflow-hidden">

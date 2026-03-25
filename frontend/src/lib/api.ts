@@ -28,6 +28,7 @@ export interface RoundSnapshot {
   data_quality: number
   site_burden: number
   n_injection_seeded: number
+  active_sites?: number
 }
 
 export interface SwarmVote {
@@ -159,6 +160,51 @@ export async function compare(
     throw new Error(`Simulation failed: ${msg}`)
   }
   return res.json()
+}
+
+export async function lookupNct(nctId: string): Promise<NctLookupResult> {
+  const res = await fetch(`${BASE}/nct/${nctId.toUpperCase()}`)
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ detail: res.statusText }))
+    throw new Error(err.detail ?? 'NCT lookup failed')
+  }
+  return res.json()
+}
+
+export interface NctLookupResult {
+  nct_id: string
+  title: string
+  therapeutic_area: string
+  phase: number | null
+  n_patients: number
+  n_sites: number
+  n_rounds: number
+  visits_per_month: number | null
+  visit_duration_hours: number | null
+  invasive_procedures: string | null
+  ediary_frequency: string | null
+  monitoring_active: boolean
+  patient_support_program: boolean
+  blinded: boolean
+  has_dsmb: boolean
+  extraction_confidence: string
+  assumed_fields: string[]
+  summary: string
+}
+
+export async function applyPolicy(policyConfig: Record<string, number>): Promise<PolicyResult> {
+  const res = await fetch(`${BASE}/policy`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(policyConfig),
+  })
+  if (!res.ok) throw new Error('Policy application failed')
+  return res.json()
+}
+
+export interface PolicyResult {
+  params: Record<string, number | boolean>
+  policy: Record<string, number>
 }
 
 export async function parseProtocol(

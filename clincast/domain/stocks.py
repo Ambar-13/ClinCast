@@ -227,6 +227,71 @@ class SafetySignalStock:
 
 
 @dataclasses.dataclass
+class SiteActivationPipeline:
+    """3-stage DELAY3 site activation pipeline.
+
+    Material delay: sites progress through contracting → IRB review → ready → active.
+    Grounded in NCI cancer center data: median 167 days from selection to first enrollment
+    (AACI/NCI, 2018). Industry average: 78–313 days observed range.
+
+    Three equal-stage Erlang delay (DELAY3) reproduces the peaked distribution of
+    activation times better than a single exponential. Sterman (2000) Ch. 11 §11.7:
+    DELAY3 has variance 1/3 of DELAY1 for same mean — gives realistic 'pipeline' shape.
+
+    Mean total delay = 5.6 months (167 days / 30). Each stage = 5.6/3 = 1.87 months.
+
+    Sources:
+      NCI: AACI Performance Metrics 2018 — median 167d, range 78-313d
+      Industry: Tufts CSDD Site Activation survey 2019
+    """
+    n_sites_total: int          # total sites contracted
+    tau_per_stage: float = 1.87 # months per DELAY3 stage [GROUNDED — NCI 167d median / 3 stages / 30 d/mo]
+
+    # Stocks: sites in each pipeline stage
+    in_contracting: float = dataclasses.field(init=False)   # stage 1
+    in_irb:         float = dataclasses.field(init=False)   # stage 2
+    ready:          float = dataclasses.field(init=False)   # stage 3
+    active:         float = dataclasses.field(init=False)   # activated and enrolling
+
+    def __post_init__(self) -> None:
+        # All sites start in contracting at t=0
+        self.in_contracting = float(self.n_sites_total)
+        self.in_irb = 0.0
+        self.ready = 0.0
+        self.active = 0.0
+
+    def step(self) -> None:
+        """Advance one month. Sites flow through pipeline via first-order delays.
+
+        DELAY3: each stage flow = stock / tau_per_stage.
+        Flow from contracting → IRB → ready → active.
+        No outflow from active (sites stay active once opened).
+        """
+        # Calculate outflows (continuous approximation: Euler step dt=1 month)
+        flow_to_irb    = self.in_contracting / self.tau_per_stage
+        flow_to_ready  = self.in_irb / self.tau_per_stage
+        flow_to_active = self.ready / self.tau_per_stage
+
+        # Update stocks (conservation: total = contracting + irb + ready + active)
+        self.in_contracting = max(0.0, self.in_contracting - flow_to_irb)
+        self.in_irb         = max(0.0, self.in_irb + flow_to_irb - flow_to_ready)
+        self.ready          = max(0.0, self.ready + flow_to_ready - flow_to_active)
+        self.active         = min(float(self.n_sites_total), self.active + flow_to_active)
+
+    @property
+    def active_fraction(self) -> float:
+        """Fraction of contracted sites that are actively enrolling this month."""
+        if self.n_sites_total == 0:
+            return 0.0
+        return self.active / self.n_sites_total
+
+    @property
+    def conservation_check(self) -> bool:
+        total = self.in_contracting + self.in_irb + self.ready + self.active
+        return abs(total - self.n_sites_total) < 0.01
+
+
+@dataclasses.dataclass
 class DataQualityStock:
     """Trial data quality index (1.0 = perfect; Phase III baseline ≈ 0.68).
 
@@ -280,9 +345,10 @@ class TrialStocks:
     site_burden: SiteBurdenStock
     safety_signal: SafetySignalStock
     data_quality: DataQualityStock
+    site_activation: SiteActivationPipeline   # ADD THIS
 
     @classmethod
-    def initialise(cls, n_patients: int) -> "TrialStocks":
+    def initialise(cls, n_patients: int, n_sites: int = 20) -> "TrialStocks":  # ADD n_sites param
         return cls(
             pipeline=PatientPipelineStock(
                 n_screening=n_patients,
@@ -294,6 +360,7 @@ class TrialStocks:
             data_quality=DataQualityStock(
                 level=DimensionalAnchors.DATA_QUALITY_PHASE3_BASELINE
             ),
+            site_activation=SiteActivationPipeline(n_sites_total=n_sites),  # ADD THIS
         )
 
     def summary(self) -> dict[str, float]:
@@ -308,4 +375,6 @@ class TrialStocks:
             "site_burden":          self.site_burden.level,
             "safety_signal":        self.safety_signal.level,
             "data_quality":         self.data_quality.level,
+            "active_sites":         self.site_activation.active,
+            "active_site_fraction": self.site_activation.active_fraction,
         }

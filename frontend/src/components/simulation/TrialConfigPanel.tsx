@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { ChevronDown, ChevronUp } from "lucide-react";
-import { THERAPEUTIC_AREAS, SimulateRequest } from "@/lib/api";
+import { ChevronDown, ChevronUp, Search, X } from "lucide-react";
+import { THERAPEUTIC_AREAS, SimulateRequest, lookupNct, NctLookupResult } from "@/lib/api";
 
 interface Props {
   value: SimulateRequest;
@@ -136,6 +136,173 @@ function Toggle({
   );
 }
 
+// ── NCT Lookup ────────────────────────────────────────────────────────────────
+
+function confidenceColor(c: string): { bg: string; text: string; border: string } {
+  if (c === "high")   return { bg: "rgba(22,163,74,0.10)",   text: "#16a34a", border: "rgba(22,163,74,0.25)" };
+  if (c === "medium") return { bg: "rgba(217,119,6,0.10)",   text: "#d97706", border: "rgba(217,119,6,0.25)" };
+  return               { bg: "rgba(220,38,38,0.10)",   text: "#dc2626", border: "rgba(220,38,38,0.25)" };
+}
+
+function NctLookup({ onApply }: { onApply: (fields: Partial<SimulateRequest>) => void }) {
+  const [open,    setOpen]    = useState(false);
+  const [nctId,   setNctId]   = useState("");
+  const [loading, setLoading] = useState(false);
+  const [result,  setResult]  = useState<NctLookupResult | null>(null);
+  const [error,   setError]   = useState<string | null>(null);
+  const [assumed, setAssumed] = useState(false);
+
+  async function lookup() {
+    if (!nctId.trim()) return;
+    setLoading(true);
+    setError(null);
+    setResult(null);
+    try {
+      const data = await lookupNct(nctId.trim());
+      setResult(data);
+      // Auto-apply on success
+      const patch: Partial<SimulateRequest> = {
+        therapeutic_area:      data.therapeutic_area,
+        n_patients:            data.n_patients,
+        n_sites:               data.n_sites,
+        n_rounds:              data.n_rounds,
+        monitoring_active:     data.monitoring_active,
+        patient_support_program: data.patient_support_program,
+        blinded:               data.blinded,
+      };
+      if (data.visits_per_month     != null) patch.visits_per_month     = data.visits_per_month;
+      if (data.visit_duration_hours != null) patch.visit_duration_hours = data.visit_duration_hours;
+      if (data.invasive_procedures  != null) patch.invasive_procedures  = data.invasive_procedures as SimulateRequest["invasive_procedures"];
+      if (data.ediary_frequency     != null) patch.ediary_frequency     = data.ediary_frequency    as SimulateRequest["ediary_frequency"];
+      onApply(patch);
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  function clear() {
+    setResult(null);
+    setError(null);
+    setNctId("");
+    setAssumed(false);
+  }
+
+  const conf = result ? confidenceColor(result.extraction_confidence) : null;
+
+  return (
+    <div className="border-b pb-4 mb-4" style={{ borderColor: "var(--border-warm)" }}>
+      <button
+        type="button"
+        onClick={() => setOpen(!open)}
+        className="flex w-full items-center justify-between text-left"
+      >
+        <div className="flex items-center gap-2">
+          <Search size={12} style={{ color: "var(--crimson-700)" }} />
+          <span className="text-[11px] font-semibold" style={{ color: "var(--ink-700)" }}>
+            Auto-fill from ClinicalTrials.gov
+          </span>
+        </div>
+        {open
+          ? <ChevronUp size={12} style={{ color: "var(--ink-400)" }} />
+          : <ChevronDown size={12} style={{ color: "var(--ink-400)" }} />}
+      </button>
+
+      {open && (
+        <div className="mt-3 space-y-2.5">
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={nctId}
+              onChange={(e) => setNctId(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter") lookup(); }}
+              placeholder="NCT12345678"
+              className="input-warm flex-1 font-mono text-xs"
+              spellCheck={false}
+            />
+            <button
+              type="button"
+              onClick={lookup}
+              disabled={loading || !nctId.trim()}
+              className="btn-primary px-3 py-1.5 text-xs shrink-0"
+            >
+              {loading ? (
+                <svg className="animate-spin h-3 w-3" viewBox="0 0 24 24" fill="none">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                </svg>
+              ) : "Lookup"}
+            </button>
+          </div>
+
+          {error && (
+            <p className="text-[11px] rounded px-2 py-1.5"
+              style={{ color: "#dc2626", background: "rgba(220,38,38,0.08)", border: "1px solid rgba(220,38,38,0.2)" }}>
+              {error}
+            </p>
+          )}
+
+          {result && conf && (
+            <div className="rounded-lg px-3 py-2.5 space-y-2"
+              style={{ background: "var(--cream-100)", border: "1px solid var(--cream-300)" }}>
+              {/* Title + clear */}
+              <div className="flex items-start justify-between gap-2">
+                <div className="flex items-start gap-2 min-w-0">
+                  <span className="mt-0.5 shrink-0 inline-flex items-center rounded-full px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-widest"
+                    style={{ background: "rgba(22,163,74,0.10)", color: "#16a34a", border: "1px solid rgba(22,163,74,0.25)" }}>
+                    Applied
+                  </span>
+                  <p className="text-[11px] font-medium leading-4" style={{ color: "var(--ink-800)" }}>
+                    {result.title}
+                  </p>
+                </div>
+                <button type="button" onClick={clear} className="shrink-0 mt-0.5">
+                  <X size={12} style={{ color: "var(--ink-400)" }} />
+                </button>
+              </div>
+
+              {/* NCT ID + confidence */}
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="font-mono text-[10px]" style={{ color: "var(--ink-500)" }}>{result.nct_id}</span>
+                <span className="inline-flex items-center rounded-full px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-widest"
+                  style={{ background: conf.bg, color: conf.text, border: `1px solid ${conf.border}` }}>
+                  {result.extraction_confidence} confidence
+                </span>
+              </div>
+
+              {/* Assumed fields */}
+              {result.assumed_fields.length > 0 && (
+                <div>
+                  <button
+                    type="button"
+                    onClick={() => setAssumed(!assumed)}
+                    className="flex items-center gap-1 text-[10px]"
+                    style={{ color: "var(--ink-400)" }}
+                  >
+                    <span>ⓘ {result.assumed_fields.length} field{result.assumed_fields.length !== 1 ? "s" : ""} inferred</span>
+                    {assumed ? <ChevronUp size={10} /> : <ChevronDown size={10} />}
+                  </button>
+                  {assumed && (
+                    <div className="mt-1.5 flex flex-wrap gap-1">
+                      {result.assumed_fields.map((f) => (
+                        <span key={f} className="rounded px-1.5 py-0.5 font-mono text-[9px]"
+                          style={{ background: "rgba(217,119,6,0.08)", color: "#d97706", border: "1px solid rgba(217,119,6,0.2)" }}>
+                          {f}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Policy narrative ──────────────────────────────────────────────────────────
 
 function policyNarrative(v: SimulateRequest): string {
@@ -223,6 +390,9 @@ export function TrialConfigPanel({ value, onChange, label }: Props) {
   return (
     <div className="card-warm p-5 space-y-0">
       {label && <p className="kicker mb-4">{label}</p>}
+
+      {/* ── NCT Lookup ───────────────────────────────────────────────────── */}
+      <NctLookup onApply={(patch) => onChange({ ...value, ...patch })} />
 
       {/* ── Policy narrative ─────────────────────────────────────────────── */}
       <div className="mb-5 rounded-lg px-4 py-3" style={{ background: "var(--cream-100)", border: "1px solid var(--cream-300)" }}>

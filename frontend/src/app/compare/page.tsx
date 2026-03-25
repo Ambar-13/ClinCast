@@ -9,7 +9,7 @@ import { AnimatedCounter } from "@/components/ui/AnimatedCounter";
 import { compare, SimulateRequest, SimulateResponse } from "@/lib/api";
 import {
   ComposedChart, Line, Area, CartesianGrid, ResponsiveContainer,
-  Tooltip, XAxis, YAxis, Legend,
+  Tooltip, XAxis, YAxis, Legend, ReferenceLine,
 } from "recharts";
 
 const DEFAULT_A: SimulateRequest = {
@@ -115,7 +115,91 @@ function toRows(result: SimulateResponse) {
     safety:         +(s.safety_signal * 100).toFixed(1),
     dataQuality:    +(s.data_quality * 100).toFixed(1),
     belief:         +(s.mean_belief * 100).toFixed(1),
+    active_sites:   s.active_sites,
   }));
+}
+
+// ── Site Activation Comparison ────────────────────────────────────────────────
+
+function SiteActivationComparison({
+  resultA, resultB,
+}: { resultA: SimulateResponse; resultB: SimulateResponse }) {
+  const hasDataA = resultA.round_snapshots.some((s) => s.active_sites != null);
+  const hasDataB = resultB.round_snapshots.some((s) => s.active_sites != null);
+
+  if (!hasDataA && !hasDataB) {
+    return (
+      <div className="card-warm p-5">
+        <p className="kicker text-[10px] mb-1">Site Activation Comparison</p>
+        <p className="text-[11px]" style={{ color: "var(--ink-400)" }}>
+          No site activation data available — re-run simulations to see the site ramp-up curves here.
+        </p>
+      </div>
+    );
+  }
+
+  const rowsA = resultA.round_snapshots
+    .filter((s) => s.active_sites != null)
+    .map((s) => ({ month: s.time_months, activeSitesA: s.active_sites as number }));
+
+  const rowsB = resultB.round_snapshots
+    .filter((s) => s.active_sites != null)
+    .map((s) => ({ month: s.time_months, activeSitesB: s.active_sites as number }));
+
+  // Merge by month index
+  const maxLen = Math.max(rowsA.length, rowsB.length);
+  const merged = Array.from({ length: maxLen }, (_, i) => ({
+    month:        rowsA[i]?.month ?? rowsB[i]?.month ?? i + 1,
+    activeSitesA: rowsA[i]?.activeSitesA,
+    activeSitesB: rowsB[i]?.activeSitesB,
+  }));
+
+  const nSitesA = resultA.n_sites;
+  const nSitesB = resultB.n_sites;
+  const maxSites = Math.max(nSitesA, nSitesB);
+
+  return (
+    <div className="card-warm p-4">
+      <p className="kicker text-[10px] mb-0.5">Site Activation Comparison</p>
+      <p className="text-[11px] mb-3" style={{ color: "var(--ink-400)" }}>
+        Site ramp-up curves — A vs B (NCI median activation: 167 days / ~5.6 months)
+      </p>
+      <ResponsiveContainer width="100%" height={200}>
+        <ComposedChart data={merged} margin={{ top: 4, right: 20, bottom: 0, left: -20 }}>
+          <CartesianGrid strokeDasharray="3 3" stroke="var(--border-warm)" />
+          <XAxis dataKey="month" tick={{ fontSize: 9, fill: "var(--ink-400)" }} tickFormatter={(v) => `${v}mo`} />
+          <YAxis
+            domain={[0, maxSites]}
+            tick={{ fontSize: 9, fill: "var(--ink-400)" }}
+            tickFormatter={(v) => String(Math.round(v))}
+          />
+          <Tooltip contentStyle={TOOLTIP_STYLE} labelFormatter={(v) => `Month ${v}`}
+            formatter={(v: number, name: string) => [
+              `${Math.round(v)} sites`,
+              name === "activeSitesA" ? "Scenario A" : "Scenario B",
+            ]}
+          />
+          <Legend
+            wrapperStyle={{ fontSize: 10, color: "var(--ink-500)", paddingTop: 4 }}
+            formatter={(value) => value === "activeSitesA" ? "Scenario A" : "Scenario B"}
+          />
+          {hasDataA && nSitesA !== nSitesB && (
+            <ReferenceLine y={nSitesA} strokeDasharray="3 3" stroke="rgba(139,26,26,0.3)" strokeWidth={1} />
+          )}
+          <ReferenceLine y={maxSites} strokeDasharray="4 3" stroke="var(--ink-300)" strokeWidth={1.5} />
+          {hasDataA && (
+            <Line type="monotone" dataKey="activeSitesA" name="activeSitesA"
+              stroke="var(--crimson-700)" dot={false} strokeWidth={2} connectNulls />
+          )}
+          {hasDataB && (
+            <Line type="monotone" dataKey="activeSitesB" name="activeSitesB"
+              stroke="var(--chart-enforcement)" dot={false} strokeWidth={2}
+              strokeDasharray="4 3" connectNulls />
+          )}
+        </ComposedChart>
+      </ResponsiveContainer>
+    </div>
+  );
 }
 
 // ── Page ──────────────────────────────────────────────────────────────────────
@@ -221,6 +305,9 @@ export default function ComparePage() {
               <OverlayChart dataA={rowsA} dataB={rowsB} metricA="safety"     metricB="safetyB"     title="Safety Signal"      sublabel="Cumulative safety signal" />
               <OverlayChart dataA={rowsA} dataB={rowsB} metricA="dataQuality" metricB="dataQualityB" title="Data Quality"     sublabel="CRF completeness & accuracy" />
             </div>
+
+            {/* Site activation comparison */}
+            <SiteActivationComparison resultA={resultA} resultB={resultB} />
 
             {/* Runtime footnote */}
             <div className="card-warm px-5 py-3 flex items-center justify-between text-xs" style={{ color: "var(--ink-400)" }}>

@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import {
   Area, ComposedChart, Line, CartesianGrid,
   ResponsiveContainer, Tooltip, XAxis, YAxis, Legend,
-  ScatterChart, Scatter, Cell, ReferenceLine,
+  ScatterChart, Scatter, Cell, ReferenceLine, Label,
 } from "recharts";
 import { AnimatedCounter } from "@/components/ui/AnimatedCounter";
 import { SimulateResponse, RoundSnapshot, SwarmMetadata } from "@/lib/api";
@@ -420,6 +420,73 @@ function SwarmPanel({ meta }: { meta: SwarmMetadata }) {
   );
 }
 
+// ── Site Activation Timeline ──────────────────────────────────────────────────
+
+interface SiteRow { month: number; active_sites: number }
+
+function SiteActivationChart({ snaps, nSites }: { snaps: SimulateResponse["round_snapshots"]; nSites: number }) {
+  const hasSiteData = snaps.some((s) => s.active_sites != null);
+  if (!hasSiteData) return null;
+
+  const data: SiteRow[] = snaps
+    .filter((s) => s.active_sites != null)
+    .map((s) => ({ month: s.time_months, active_sites: s.active_sites as number }));
+
+  return (
+    <div className="card-warm p-4">
+      <p className="kicker text-[10px] mb-0.5">Site Activation Timeline</p>
+      <p className="text-[11px] mb-3" style={{ color: "var(--ink-400)" }}>
+        Active sites ramping up over trial duration (S-curve)
+      </p>
+      <ResponsiveContainer width="100%" height={180}>
+        <ComposedChart data={data} margin={{ top: 4, right: 16, bottom: 0, left: -20 }}>
+          <defs>
+            <linearGradient id="grad-sites" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="5%"  stopColor="var(--chart-enforcement)" stopOpacity={0.18} />
+              <stop offset="95%" stopColor="var(--chart-enforcement)" stopOpacity={0} />
+            </linearGradient>
+          </defs>
+          <CartesianGrid strokeDasharray="3 3" stroke="var(--border-warm)" />
+          <XAxis
+            dataKey="month"
+            tick={{ fontSize: 9, fill: "var(--ink-400)" }}
+            tickFormatter={(v) => `${v}mo`}
+          />
+          <YAxis
+            domain={[0, nSites]}
+            tick={{ fontSize: 9, fill: "var(--ink-400)" }}
+            tickFormatter={(v) => String(Math.round(v))}
+          />
+          <Tooltip
+            contentStyle={TOOLTIP_STYLE}
+            labelFormatter={(v) => `Month ${v}`}
+            formatter={(v: number) => [`${Math.round(v)} sites`, "Active Sites"]}
+          />
+          <ReferenceLine y={nSites} strokeDasharray="4 3" stroke="var(--ink-300)" strokeWidth={1.5}>
+            <Label
+              value={`All ${nSites} sites`}
+              position="right"
+              style={{ fontSize: 9, fill: "var(--ink-400)" }}
+            />
+          </ReferenceLine>
+          <Area type="monotone" dataKey="active_sites" fill="url(#grad-sites)" stroke="none" />
+          <Line
+            type="monotone"
+            dataKey="active_sites"
+            name="Active Sites"
+            stroke="var(--chart-enforcement)"
+            dot={false}
+            strokeWidth={2}
+          />
+        </ComposedChart>
+      </ResponsiveContainer>
+      <p className="mt-2 text-[10px]" style={{ color: "var(--ink-400)" }}>
+        NCI median activation: 167 days (~5.6 months)
+      </p>
+    </div>
+  );
+}
+
 // ── Main panel ────────────────────────────────────────────────────────────────
 
 interface Props {
@@ -497,6 +564,7 @@ export function TrialResultsPanel({ result }: Props) {
               { key: "belief",      color: "var(--warning)",  name: "Mean Belief"   },
             ]}
           />
+          <SiteActivationChart snaps={result.round_snapshots} nSites={result.n_sites} />
         </div>
       ) : (
         <div className="grid grid-cols-2 gap-3">

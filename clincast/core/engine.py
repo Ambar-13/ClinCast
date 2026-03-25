@@ -61,7 +61,7 @@ from clincast.domain.response import (
     accumulate_ae_load,
     AE_GRADE_WEIGHT,
 )
-from clincast.domain.stocks import TrialStocks
+from clincast.domain.stocks import TrialStocks, SiteActivationPipeline
 from clincast.reports.evidence_pack import (
     Tag,
     TaggedValue,
@@ -100,6 +100,16 @@ class SimConfig:
     # competitive-free landscape); <1.0 = recruitment difficulty.
     enrollment_rate_modifier: float = 1.0
 
+    # Scheduled visits per month (from protocol extraction)
+    # Used to modulate site burden and patient fatigue accumulation.
+    # Typical ranges: Phase I 4-8/mo, Phase II 2-4/mo, Phase III 1-2/mo. [DIRECTIONAL]
+    visits_per_month: float = 2.0
+
+    # Patient support program (transport, reminders, coordinator)
+    # When True: reduces site burden from query volume [DIRECTIONAL]
+    # Reduces dropout hazard for LOW_ACCESS_RURAL archetype by ~15% [ASSUMED magnitude]
+    patient_support_program: bool = False
+
     # LLM swarm mode — None = offline (vectorized only)
     llm_client:    Any | None = None
     n_swarm_agents: int       = 1000
@@ -137,6 +147,7 @@ class SimulationRound:
     data_quality: float
     site_burden: float
     n_injection_seeded: int = 0
+    active_sites: float = 0.0  # from site activation pipeline
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -180,18 +191,37 @@ def run_simulation(config: SimConfig) -> TrialOutputs:
     T = compute_degroot_weights(G, stubbornness)
 
     # ── Initialise stocks ─────────────────────────────────────────────────────
-    stocks = TrialStocks.initialise(config.n_patients)
+    stocks = TrialStocks.initialise(config.n_patients, n_sites=config.n_sites)
 
     # ── Optional LLM swarm mode ───────────────────────────────────────────────
     swarm_prior_adjustment: dict = {}
     if config.llm_client is not None:
         swarm_prior_adjustment = _run_llm_swarm(config, n_agents=config.n_swarm_agents)
-        # Apply bounded belief shift to initial population beliefs
         belief_shift = float(swarm_prior_adjustment.get("belief_shift", 0.0))
         if belief_shift != 0.0:
             pop.state[:, COL_BELIEF] = np.clip(
                 pop.state[:, COL_BELIEF] + belief_shift, 0.05, 0.95,
             ).astype(np.float32)
+
+        # Apply archetype proportion adjustments if present [SWARM-ELICITED]
+        prop_adjustments = swarm_prior_adjustment.get("archetype_prop_adjustments", {})
+        if prop_adjustments:
+            # Rebuild archetype assignment using adjusted proportions
+            new_props = np.array([
+                ARCHETYPES[a].default_proportion for a in ArchetypeID
+            ], dtype=np.float64)
+            for aid_int, new_prop in prop_adjustments.items():
+                new_props[int(aid_int)] = new_prop
+            # Renormalize (adjustments may not exactly sum to 1)
+            new_props = np.clip(new_props, 0.01, 1.0)
+            new_props /= new_props.sum()
+            # Reassign archetypes for screening patients only (not yet enrolled)
+            screening_mask = pop.screening()
+            n_screening = int(screening_mask.sum())
+            if n_screening > 0:
+                rng_local = np.random.default_rng(config.seed + 1)
+                new_archetypes = rng_local.choice(len(new_props), size=n_screening, p=new_props).astype(np.int8)
+                pop.archetype_ids[screening_mask] = new_archetypes
 
     # Per-patient enrollment round — for per-patient Weibull time computation.
     # Initialized to -1 (unenrolled). Set when patient transitions to enrolled.
@@ -207,6 +237,9 @@ def run_simulation(config: SimConfig) -> TrialOutputs:
         t_months = r * config.months_per_round
         n_seeded_this_round = 0
 
+        # Advance site activation pipeline (DELAY3 — NCI 167-day median)
+        stocks.site_activation.step()
+
         # 1. Enrollment: Poisson draw for new patients from screening pool
         screening_mask = pop.screening()
         n_screening = int(screening_mask.sum())
@@ -216,7 +249,10 @@ def run_simulation(config: SimConfig) -> TrialOutputs:
             # Empirical overdispersion ratio var/mean ≈ 6 (PMID 12873651).
             # NB via Gamma-Poisson: draw site-aggregate rate ~ Gamma(r, mean/r),
             # where r = mean/(ratio-1) = mean/5. Then n_new ~ Poisson(nb_rate).
-            site_rate = max(0.5, 0.8 * config.n_sites * config.enrollment_rate_modifier * (1.0 - stocks.site_burden.level))
+            # Active sites modulates enrollment: early rounds have few active sites
+            # NCI 167-day median activation → active_fraction ramps from ~0 to ~1 over months 1-8
+            active_fraction = stocks.site_activation.active_fraction
+            site_rate = max(0.5, 0.8 * config.n_sites * active_fraction * config.enrollment_rate_modifier * (1.0 - stocks.site_burden.level))
             # NB via Gamma-Poisson. r = mean/5 gives overdispersion ratio 6 (Anisimov 2007).
             # Floor r at 1.0 to prevent extreme zero-enrollment rounds; still overdispersed
             # (ratio ≈ 3 at floor), captures inter-site variance without pathological sparsity.
@@ -391,6 +427,7 @@ def run_simulation(config: SimConfig) -> TrialOutputs:
             data_quality=stocks.data_quality.level,
             site_burden=stocks.site_burden.level,
             n_injection_seeded=n_seeded_this_round,
+            active_sites=stocks.site_activation.active,
         ))
 
     elapsed = time.perf_counter() - t0
@@ -507,6 +544,7 @@ def _empty_round(r: int, t_months: float, stocks: TrialStocks) -> SimulationRoun
         safety_signal=stocks.safety_signal.level,
         data_quality=stocks.data_quality.level,
         site_burden=stocks.site_burden.level,
+        active_sites=stocks.site_activation.active,
     )
 
 
@@ -712,6 +750,36 @@ def _run_llm_swarm(config: SimConfig, n_agents: int = 1000) -> dict:
             lo, hi = int(idx), min(int(idx) + 1, len(lst_s) - 1)
             return round(lst_s[lo] + (lst_s[hi] - lst_s[lo]) * (idx - lo), 4)
 
+        # Map vote distribution to archetype proportion adjustments via 5-bucket quantile assignment.
+        # Instead of a single scalar shift, distribute vote sentiment to archetype proportions.
+        # Votes in the bottom 20% of belief → HIGH_ANXIETY archetype fraction up
+        # Votes in the top 20% → MOTIVATED_YOUNG_ADULT fraction up
+        # This is the nearest-centroid mapping: each vote's position in the distribution
+        # tells us which archetype cluster it most resembles.
+        # [ASSUMED mapping — nearest-centroid is principled but centroids are DIRECTIONAL]
+        belief_sorted = sorted(b_vals)
+        n_v = len(belief_sorted)
+        p20  = belief_sorted[max(0, int(0.20 * n_v) - 1)]
+        p80  = belief_sorted[min(n_v - 1, int(0.80 * n_v))]
+        # Compute archetype proportion adjustments from vote distribution
+        high_anxiety_fraction   = sum(1 for b in b_vals if b < p20) / n_v   # bottom quintile
+        motivated_fraction      = sum(1 for b in b_vals if b > p80) / n_v   # top quintile
+        # Default archetype proportions (from ARCHETYPES) — adjust based on vote distribution
+        from clincast.domain.agents import ArchetypeID
+        default_props = {
+            ArchetypeID.TREATMENT_NAIVE_HIGH_ANXIETY: 0.20,
+            ArchetypeID.EXPERIENCED_ADVOCATE:         0.15,
+            ArchetypeID.CAREGIVER_DEPENDENT_ELDERLY:  0.20,
+            ArchetypeID.LOW_ACCESS_RURAL:             0.25,
+            ArchetypeID.MOTIVATED_YOUNG_ADULT:        0.20,
+        }
+        # Shift: high_anxiety up by (high_anxiety_fraction - 0.20), motivated up by (motivated_fraction - 0.20)
+        # Remaining archetypes absorb the difference proportionally
+        archetype_prop_adjustments = {
+            int(ArchetypeID.TREATMENT_NAIVE_HIGH_ANXIETY): round(high_anxiety_fraction, 4),
+            int(ArchetypeID.MOTIVATED_YOUNG_ADULT):        round(motivated_fraction, 4),
+        }
+
         # Representative sample spanning the belief_shift distribution:
         # half the agents up to 2000 so scatter shows density at scale.
         sorted_results = sorted(results, key=lambda r: r["belief_shift"])
@@ -720,20 +788,21 @@ def _run_llm_swarm(config: SimConfig, n_agents: int = 1000) -> dict:
         sample_votes = [sorted_results[i] for i in range(0, len(sorted_results), step)][:target]
 
         return {
-            "belief_shift":    round(sum(b_vals) / len(b_vals), 4),
-            "adherence_shift": round(sum(a_vals) / len(a_vals), 4),
-            "n_agents":        len(results),
-            "n_failed":        n_failed,
-            "belief_std":      round(_stats.stdev(b_vals) if len(b_vals) > 1 else 0.0, 4),
-            "adherence_std":   round(_stats.stdev(a_vals) if len(a_vals) > 1 else 0.0, 4),
-            "belief_p10":      pct(b_vals, 10),
-            "belief_p50":      pct(b_vals, 50),
-            "belief_p90":      pct(b_vals, 90),
-            "adherence_p10":   pct(a_vals, 10),
-            "adherence_p50":   pct(a_vals, 50),
-            "adherence_p90":   pct(a_vals, 90),
-            "votes":           sample_votes,   # up to n//2 agents, max 2000
-            "tag":             "SWARM-ELICITED",
+            "belief_shift":              round(sum(b_vals) / len(b_vals), 4),
+            "adherence_shift":           round(sum(a_vals) / len(a_vals), 4),
+            "n_agents":                  len(results),
+            "n_failed":                  n_failed,
+            "belief_std":                round(_stats.stdev(b_vals) if len(b_vals) > 1 else 0.0, 4),
+            "adherence_std":             round(_stats.stdev(a_vals) if len(a_vals) > 1 else 0.0, 4),
+            "belief_p10":                pct(b_vals, 10),
+            "belief_p50":                pct(b_vals, 50),
+            "belief_p90":                pct(b_vals, 90),
+            "adherence_p10":             pct(a_vals, 10),
+            "adherence_p50":             pct(a_vals, 50),
+            "adherence_p90":             pct(a_vals, 90),
+            "votes":                     sample_votes,   # up to n//2 agents, max 2000
+            "archetype_prop_adjustments": archetype_prop_adjustments,
+            "tag":                       "SWARM-ELICITED",
         }
 
     except Exception as exc:

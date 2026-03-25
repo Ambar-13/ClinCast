@@ -30,15 +30,19 @@ const DEFAULT: SimulateRequest = {
 
 export default function SimulatePage() {
   const [req,       setReq]       = useState<SimulateRequest>(DEFAULT);
-  const [useSwarm,  setUseSwarm]  = useState(() =>
-    typeof window !== "undefined" ? localStorage.getItem("clincast_swarm") !== "false" : true
-  );
-  const [nAgents,   setNAgents]   = useState(() =>
-    typeof window !== "undefined" ? +(localStorage.getItem("clincast_nagents") ?? 1000) : 1000
-  );
-  const [apiKey,    setApiKey]    = useState(() =>
-    typeof window !== "undefined" ? (localStorage.getItem("clincast_openai_key") ?? "") : ""
-  );
+  const [useSwarm,  setUseSwarm]  = useState(true);
+  const [nAgents,   setNAgents]   = useState(1000);
+  const [apiKey,    setApiKey]    = useState("");
+
+  // Restore persisted values client-side only (after hydration) to avoid mismatch
+  useEffect(() => {
+    const swarm  = localStorage.getItem("clincast_swarm");
+    const agents = localStorage.getItem("clincast_nagents");
+    const key    = localStorage.getItem("clincast_openai_key");
+    if (swarm  !== null) setUseSwarm(swarm !== "false");
+    if (agents !== null) setNAgents(+agents);
+    if (key    !== null) setApiKey(key);
+  }, []);
 
   useEffect(() => { localStorage.setItem("clincast_openai_key", apiKey); }, [apiKey]);
   useEffect(() => { localStorage.setItem("clincast_swarm",      String(useSwarm)); }, [useSwarm]);

@@ -593,7 +593,6 @@ def _call_llm(client: object, is_openai: bool, prompt: str) -> dict:
             model="gpt-4o-mini",
             max_tokens=150,
             messages=[{"role": "user", "content": prompt}],
-            response_format={"type": "json_object"},
         )
         raw = resp.choices[0].message.content.strip()
     else:

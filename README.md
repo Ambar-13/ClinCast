@@ -13,9 +13,11 @@
   [![Next.js](https://img.shields.io/badge/Next.js-15-086788.svg)](https://nextjs.org)
 </div>
 
-| Configure | Simulation results | Agent decision map |
-|---|---|---|
-| ![Configure](docs/ui.png) | ![Results](docs/ui-results.png) | ![Agents](docs/ui-agents.jpg) |
+![Configure](docs/ui.png)
+
+![Results](docs/ui-results.png)
+
+![Agents](docs/ui-agents.jpg)
 
 ---
 

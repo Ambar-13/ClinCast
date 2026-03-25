@@ -81,6 +81,7 @@ class TrialSpec:
     randomization_ratio:   str  | None = None  # 1:1/2:1/3:1
     blinded:               bool = True
     competitive_pressure:  str  | None = None  # none/low/medium/high
+    enrollment_rate_modifier: float | None = None
 
     # Primary endpoint
     primary_endpoint: str = ""
@@ -94,6 +95,10 @@ class TrialSpec:
     source_file: str = ""
     extraction_confidence: str = "high"   # high | medium | low
     assumed_fields: list[str] = dataclasses.field(default_factory=list)
+    field_sources: dict = dataclasses.field(default_factory=dict)
+    field_reasoning: dict = dataclasses.field(default_factory=dict)
+    document_type: str = "Protocol"
+    summary: str = ""
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -213,23 +218,75 @@ _EXTRACTION_SCHEMA = {
     "required": ["title", "therapeutic_area"],
 }
 
-_EXTRACTION_PROMPT = """You are a clinical trial operations expert. Extract structured simulation parameters from the protocol document below.
+_EXTRACTION_PROMPT = """You are a senior clinical trial design expert with 20+ years of experience across all therapeutic areas and trial phases. You are analyzing a document to configure a clinical trial simulation.
 
-Rules:
-- Return a JSON object matching the schema. Use null for any field not found.
-- Do NOT invent values — only extract what is explicitly or clearly implied.
-- For visits_per_month: divide total scheduled visits by trial duration in months.
-- For visit_duration_hours: estimate from procedures listed (blood draw ~1h, infusion ~4-6h, lumbar puncture ~3h).
-- For competitive_pressure: infer from disease prevalence, number of competing trials mentioned, or recruitment challenges noted.
-- For invasive_procedures: choose the most burdensome single procedure type from the schedule.
+STEP 1 — Identify the document type:
+Protocol (ICH E6), SOP/Policy, Strategic/portfolio plan, Regulatory submission, Scientific publication, Feasibility assessment, or Other.
 
-Protocol text (first 12,000 characters):
+STEP 2 — Extract OR infer every parameter below. You MUST provide a value for every field. Use your clinical domain expertise to infer values that are not explicitly stated. Only mark a field "explicit" if the value is clearly stated in the document; otherwise mark it "inferred" and explain why.
+
+INFERENCE RULES (use when not explicit):
+- n_patients: Phase I→30-80, Phase II→100-300, Phase III→300-2000, Phase IV→500-5000. Scale down for rare disease.
+- n_sites: Phase I→3-8, Phase II→15-40, Phase III→50-200. Rare disease→fewer globally.
+- n_rounds (months): Phase I→12-18, Phase II→18-36, Phase III→36-60. Oncology survival endpoints→shorter. Chronic CNS→longer.
+- visits_per_month: Phase I intensive safety→4-8/mo. Phase II→2-4/mo. Phase III→1-2/mo. Alzheimer's/CNS chronic→1-2/mo. Oncology chemo cycle→2-4/mo. Metabolic/Rare→1/mo.
+- visit_duration_hours: Blood-only→1-2h. Infusion→3-6h. Lumbar puncture→3-4h. Biopsy→2-4h. Standard cognitive/psych assessments→2-3h.
+- invasive_procedures: CNS/Alzheimer's→often lp or blood. Oncology→infusion or biopsy. CVD/Metabolic→blood. Rare→blood or infusion. Phase I→always blood at minimum.
+- competitive_pressure: Alzheimer's/oncology→high. Rare disease→low (no alternatives). Schizophrenia/CVD→medium. Novel first-in-class→low initially.
+- ediary_frequency: CNS/pain/metabolic ePRO→daily. Oncology symptom diary→weekly. CVD/Rare→none or weekly.
+- monitoring_active: Industry Phase III→always true. Academic Phase I/II→usually true.
+- patient_support_program: Industry-sponsored Phase III→usually true. Rare disease→usually true. Academic→usually false.
+- randomization_ratio: Standard→1:1. Active-arm enrichment or placebo ethical concerns→2:1. Rare/oncology→sometimes 2:1.
+- blinded: Phase I→usually false (open-label safety). Phase II/III→usually true (double-blind). Oncology with objective tumor response→may be false.
+- enrollment_rate_modifier: Common disease with broad eligibility→1.0-1.5. Rare disease or strict criteria→0.3-0.7. Standard→1.0.
+
+FOR POLICY/STRATEGY DOCUMENTS: Extract the INTENT. "Patient-centric rare CNS program" → rare area, low competitive pressure, patient support=true, lower visit burden. Infer what a trial implementing this policy would look like.
+
+FOR ANY DOCUMENT: Write a 2-3 sentence plain-English summary of what trial or program this document describes and what it is trying to achieve.
+
+Document text (up to 12,000 characters):
 {text}
 
-JSON Schema:
-{schema}
-
-Return only valid JSON, no explanation."""
+Return ONLY a JSON object with these exact fields:
+{{
+  "title": "string",
+  "document_type": "string (Protocol/Policy/Strategy/Regulatory/Publication/Feasibility/Other)",
+  "therapeutic_area": "one of: oncology|metabolic|cns|cardiovascular|alzheimers|rare|other",
+  "phase": "integer 1-4 or null",
+  "n_patients": "integer",
+  "n_sites": "integer",
+  "n_rounds": "integer (calendar months)",
+  "visits_per_month": "number",
+  "visit_duration_hours": "number",
+  "invasive_procedures": "one of: none|blood|lp|biopsy|infusion",
+  "ediary_frequency": "one of: none|weekly|daily",
+  "monitoring_active": "boolean",
+  "patient_support_program": "boolean",
+  "randomization_ratio": "one of: 1:1|2:1|3:1",
+  "blinded": "boolean",
+  "competitive_pressure": "one of: none|low|medium|high",
+  "enrollment_rate_modifier": "number 0.1-3.0",
+  "summary": "string (2-3 sentence plain-English description of what this trial/policy is trying to do)",
+  "_sources": {{
+    "therapeutic_area": "explicit|inferred|default",
+    "n_patients": "explicit|inferred|default",
+    "n_sites": "explicit|inferred|default",
+    "n_rounds": "explicit|inferred|default",
+    "visits_per_month": "explicit|inferred|default",
+    "visit_duration_hours": "explicit|inferred|default",
+    "invasive_procedures": "explicit|inferred|default",
+    "ediary_frequency": "explicit|inferred|default",
+    "monitoring_active": "explicit|inferred|default",
+    "patient_support_program": "explicit|inferred|default",
+    "randomization_ratio": "explicit|inferred|default",
+    "blinded": "explicit|inferred|default",
+    "competitive_pressure": "explicit|inferred|default",
+    "enrollment_rate_modifier": "explicit|inferred|default"
+  }},
+  "_reasoning": {{
+    "field_name": "brief explanation for inferred or uncertain fields"
+  }}
+}}"""
 
 
 def extract_with_llm(text: str, llm_client: Any) -> dict[str, Any]:
@@ -239,10 +296,7 @@ def extract_with_llm(text: str, llm_client: Any) -> dict[str, Any]:
     Anthropic uses messages.create directly.
     """
     sample = text[:12_000]
-    prompt = _EXTRACTION_PROMPT.format(
-        text=sample,
-        schema=json.dumps(_EXTRACTION_SCHEMA, indent=2),
-    )
+    prompt = _EXTRACTION_PROMPT.format(text=sample)
 
     is_openai = hasattr(llm_client, "chat")
 
@@ -251,13 +305,14 @@ def extract_with_llm(text: str, llm_client: Any) -> dict[str, Any]:
             model="gpt-4o-mini",
             messages=[{"role": "user", "content": prompt}],
             temperature=0.0,
+            max_tokens=1500,
         )
         raw = response.choices[0].message.content
     else:
         # Anthropic
         response = llm_client.messages.create(
             model="claude-haiku-4-5-20251001",
-            max_tokens=2048,
+            max_tokens=1500,
             messages=[{"role": "user", "content": prompt}],
         )
         raw = response.content[0].text
@@ -307,6 +362,31 @@ def extract_rule_based(text: str) -> tuple[dict[str, Any], list[str]]:
             break
     result["therapeutic_area"] = ta_detected.value
 
+    # Infer simulation parameters from therapeutic area
+    ta_defaults = {
+        TherapeuticArea.ONCOLOGY:       {"visits_per_month": 3.0, "visit_duration_hours": 4.0, "invasive_procedures": "infusion", "competitive_pressure": "medium", "ediary_frequency": "weekly", "blinded": False},
+        TherapeuticArea.METABOLIC:      {"visits_per_month": 1.0, "visit_duration_hours": 1.5, "invasive_procedures": "blood",   "competitive_pressure": "medium", "ediary_frequency": "daily",  "blinded": True},
+        TherapeuticArea.CNS:            {"visits_per_month": 2.0, "visit_duration_hours": 2.0, "invasive_procedures": "blood",   "competitive_pressure": "medium", "ediary_frequency": "daily",  "blinded": True},
+        TherapeuticArea.CARDIOVASCULAR: {"visits_per_month": 1.0, "visit_duration_hours": 1.5, "invasive_procedures": "blood",   "competitive_pressure": "high",   "ediary_frequency": "none",   "blinded": True},
+        TherapeuticArea.IMMUNOLOGY:     {"visits_per_month": 1.0, "visit_duration_hours": 2.0, "invasive_procedures": "blood",   "competitive_pressure": "medium", "ediary_frequency": "weekly", "blinded": True},
+        TherapeuticArea.RARE:           {"visits_per_month": 1.0, "visit_duration_hours": 2.0, "invasive_procedures": "blood",   "competitive_pressure": "low",    "ediary_frequency": "none",   "blinded": True},
+        TherapeuticArea.OTHER:          {"visits_per_month": 2.0, "visit_duration_hours": 2.0, "invasive_procedures": "blood",   "competitive_pressure": "none",   "ediary_frequency": "none",   "blinded": True},
+    }
+    ta_inf = ta_defaults.get(ta_detected, ta_defaults[TherapeuticArea.OTHER])
+    for k, v in ta_inf.items():
+        result[k] = v
+        assumed.append(k)
+
+    # Additional inferred defaults
+    result["enrollment_rate_modifier"] = 1.0
+    assumed.append("enrollment_rate_modifier")
+    result["randomization_ratio"] = "1:1"
+    assumed.append("randomization_ratio")
+    result["monitoring_active"] = True
+    assumed.append("monitoring_active")
+    result["patient_support_program"] = False
+    assumed.append("patient_support_program")
+
     # Phase
     phase_match = re.search(r'phase\s+([123])', text_lower)
     result["phase"] = int(phase_match.group(1)) if phase_match else None
@@ -336,6 +416,27 @@ def extract_rule_based(text: str) -> tuple[dict[str, Any], list[str]]:
     result["n_sites_target"] = 20
     assumed.append("n_sites_target")
 
+    # Build _sources and _reasoning for consistency with LLM output
+    key_fields = [
+        "therapeutic_area", "n_patients_target", "n_sites_target", "duration_weeks",
+        "visits_per_month", "visit_duration_hours", "invasive_procedures",
+        "ediary_frequency", "monitoring_active", "patient_support_program",
+        "randomization_ratio", "blinded", "competitive_pressure", "enrollment_rate_modifier",
+    ]
+    sources: dict[str, str] = {}
+    reasoning: dict[str, str] = {}
+    for field in key_fields:
+        if field in assumed:
+            sources[field] = "default"
+            reasoning[field] = f"No LLM available; inferred from therapeutic area ({ta_detected.value}) defaults"
+        else:
+            sources[field] = "inferred"
+
+    result["_sources"] = sources
+    result["_reasoning"] = reasoning
+    result["document_type"] = "Protocol"
+    result["summary"] = ""
+
     return result, assumed
 
 
@@ -362,6 +463,39 @@ def validate_spec(raw: dict[str, Any]) -> list[str]:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# CONFIDENCE CALCULATION
+# ─────────────────────────────────────────────────────────────────────────────
+
+_KEY_FIELDS_FOR_CONFIDENCE = [
+    "therapeutic_area", "n_patients", "n_sites", "n_rounds",
+    "visits_per_month", "visit_duration_hours", "invasive_procedures",
+    "ediary_frequency", "monitoring_active", "patient_support_program",
+    "randomization_ratio", "blinded", "competitive_pressure", "enrollment_rate_modifier",
+]
+
+
+def _compute_confidence(sources: dict[str, str]) -> str:
+    """Compute extraction confidence from field sources.
+
+    high   → >70% of key fields are "explicit"
+    medium → >40% are "explicit" or "inferred"
+    low    → mostly defaults or rule-based
+    """
+    total = len(_KEY_FIELDS_FOR_CONFIDENCE)
+    if total == 0:
+        return "low"
+
+    n_explicit = sum(1 for f in _KEY_FIELDS_FOR_CONFIDENCE if sources.get(f) == "explicit")
+    n_inferred = sum(1 for f in _KEY_FIELDS_FOR_CONFIDENCE if sources.get(f) == "inferred")
+
+    if n_explicit / total > 0.70:
+        return "high"
+    if (n_explicit + n_inferred) / total > 0.40:
+        return "medium"
+    return "low"
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # PUBLIC API
 # ─────────────────────────────────────────────────────────────────────────────
 
@@ -379,10 +513,12 @@ def parse_protocol(
     """
     text = load_text(path)
     assumed: list[str] = []
+    llm_succeeded = False
 
     if llm_client is not None:
         try:
             raw = extract_with_llm(text, llm_client)
+            llm_succeeded = True
         except Exception:
             raw, assumed = extract_rule_based(text)
     else:
@@ -415,6 +551,22 @@ def parse_protocol(
         (int(raw.get("n_rounds", 0)) * 4) or 52
     )
 
+    # Pull _sources, _reasoning, document_type, summary from LLM output
+    field_sources: dict[str, str] = raw.get("_sources", {})
+    field_reasoning: dict[str, str] = raw.get("_reasoning", {})
+    document_type: str = raw.get("document_type", "Protocol")
+    summary: str = raw.get("summary", "")
+
+    # Compute assumed_fields from _sources when LLM succeeded
+    if llm_succeeded:
+        assumed = [f for f, src in field_sources.items() if src == "default"]
+
+    # Compute confidence from sources
+    if llm_succeeded and field_sources:
+        extraction_confidence = _compute_confidence(field_sources)
+    else:
+        extraction_confidence = "low"
+
     return TrialSpec(
         title=raw.get("title", path.stem),
         therapeutic_area=TherapeuticArea(raw.get("therapeutic_area", "other")),
@@ -439,11 +591,16 @@ def parse_protocol(
         randomization_ratio=raw.get("randomization_ratio"),
         blinded=bool(raw.get("blinded", True)),
         competitive_pressure=raw.get("competitive_pressure"),
+        enrollment_rate_modifier=raw.get("enrollment_rate_modifier"),
         primary_endpoint=str(raw.get("primary_endpoint", "")),
         endpoint_timepoint_weeks=raw.get("endpoint_timepoint_weeks"),
         has_dsmb=bool(raw.get("has_dsmb", True)),
         interim_analyses=int(raw.get("interim_analyses", 0)),
         source_file=str(path),
-        extraction_confidence="high" if llm_client and not assumed else "medium",
+        extraction_confidence=extraction_confidence,
         assumed_fields=assumed,
+        field_sources=field_sources,
+        field_reasoning=field_reasoning,
+        document_type=document_type,
+        summary=summary,
     )

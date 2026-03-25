@@ -21,10 +21,14 @@ class ParsedProtocolResponse(BaseModel):
     Only fields that could be confidently extracted are included.
     The frontend merges these into the current form state.
     """
-    title:          str
-    confidence:     str            # "high" | "medium" | "low"
-    assumed_fields: list[str]
-    params:         dict[str, Any]  # subset of SimulateRequest fields
+    title:           str
+    document_type:   str = "Protocol"
+    confidence:      str            # "high" | "medium" | "low"
+    assumed_fields:  list[str]
+    params:          dict[str, Any]  # subset of SimulateRequest fields
+    field_sources:   dict[str, str] = {}   # field → "explicit"|"inferred"|"default"
+    field_reasoning: dict[str, str] = {}   # field → reasoning string
+    summary:         str = ""
 
 
 def _make_llm_client(openai_api_key: str | None):
@@ -48,38 +52,109 @@ def _make_llm_client(openai_api_key: str | None):
     return None
 
 
+ALL_SIM_FIELDS = [
+    "therapeutic_area", "n_patients", "n_sites", "n_rounds",
+    "visits_per_month", "visit_duration_hours", "invasive_procedures",
+    "ediary_frequency", "monitoring_active", "patient_support_program",
+    "randomization_ratio", "blinded", "competitive_pressure",
+    "enrollment_rate_modifier",
+]
+
+# Sensible fallbacks when a field is missing from the spec
+_FIELD_FALLBACKS: dict[str, Any] = {
+    "therapeutic_area":        "other",
+    "n_patients":              200,
+    "n_sites":                 20,
+    "n_rounds":                12,
+    "visits_per_month":        2.0,
+    "visit_duration_hours":    2.0,
+    "invasive_procedures":     "blood",
+    "ediary_frequency":        "none",
+    "monitoring_active":       True,
+    "patient_support_program": False,
+    "randomization_ratio":     "1:1",
+    "blinded":                 True,
+    "competitive_pressure":    "none",
+    "enrollment_rate_modifier": 1.0,
+}
+
+# Mapping from ALL_SIM_FIELDS names to TrialSpec attribute names
+_SPEC_ATTR_MAP: dict[str, str] = {
+    "n_patients": "n_patients_target",
+    "n_sites":    "n_sites_target",
+    "n_rounds":   "n_rounds",  # computed below
+}
+
+
 def _spec_to_params(spec: TrialSpec) -> dict[str, Any]:
-    """Convert a TrialSpec to a partial SimulateRequest dict."""
-    params: dict[str, Any] = {
-        "therapeutic_area": spec.therapeutic_area.value,
-    }
+    """Convert a TrialSpec to a complete SimulateRequest dict with all simulation fields."""
+    params: dict[str, Any] = {}
 
-    if spec.n_patients_target:
-        params["n_patients"] = spec.n_patients_target
-    if spec.n_sites_target:
-        params["n_sites"] = spec.n_sites_target
-    if spec.duration_weeks:
-        params["n_rounds"] = max(1, round(spec.duration_weeks / 4.33))
+    # therapeutic_area
+    params["therapeutic_area"] = spec.therapeutic_area.value
 
-    if spec.visit_schedule:
-        vs = spec.visit_schedule
-        # visits_per_month = 4.33 / interval_weeks (weeks/visit → visits/month)
-        if vs.interval_weeks and vs.interval_weeks > 0:
-            params["visits_per_month"] = round(4.33 / vs.interval_weeks, 2)
+    # n_patients
+    params["n_patients"] = getattr(spec, "n_patients_target", None) or _FIELD_FALLBACKS["n_patients"]
 
-    if spec.n_procedures_per_visit:
-        n = spec.n_procedures_per_visit
-        if n <= 2:
-            params["invasive_procedures"] = "blood"
-        elif n <= 4:
-            params["invasive_procedures"] = "blood"
-        else:
-            params["invasive_procedures"] = "biopsy"
+    # n_sites
+    params["n_sites"] = getattr(spec, "n_sites_target", None) or _FIELD_FALLBACKS["n_sites"]
 
-    params["has_dsmb"]          = spec.has_dsmb
-    params["interim_analyses"]  = spec.interim_analyses
-    params["blinded"]           = True  # default; may be overridden by LLM
-    params["monitoring_active"] = True  # default
+    # n_rounds — prefer spec.duration_weeks → convert, with spec visit schedule override
+    duration_weeks = getattr(spec, "duration_weeks", None)
+    if duration_weeks:
+        params["n_rounds"] = max(1, round(duration_weeks / 4.33))
+    else:
+        params["n_rounds"] = _FIELD_FALLBACKS["n_rounds"]
+
+    # visits_per_month — prefer direct field, then derive from visit_schedule
+    vpm = getattr(spec, "visits_per_month", None)
+    if vpm is not None:
+        params["visits_per_month"] = vpm
+    elif spec.visit_schedule and spec.visit_schedule.interval_weeks and spec.visit_schedule.interval_weeks > 0:
+        params["visits_per_month"] = round(4.33 / spec.visit_schedule.interval_weeks, 2)
+    else:
+        params["visits_per_month"] = _FIELD_FALLBACKS["visits_per_month"]
+
+    # visit_duration_hours
+    vdh = getattr(spec, "visit_duration_hours", None)
+    params["visit_duration_hours"] = vdh if vdh is not None else _FIELD_FALLBACKS["visit_duration_hours"]
+
+    # invasive_procedures — prefer direct field, then derive from n_procedures_per_visit
+    inv = getattr(spec, "invasive_procedures", None)
+    if inv is not None:
+        params["invasive_procedures"] = inv
+    else:
+        n = getattr(spec, "n_procedures_per_visit", 3) or 3
+        params["invasive_procedures"] = "biopsy" if n > 4 else "blood"
+
+    # ediary_frequency
+    edf = getattr(spec, "ediary_frequency", None)
+    params["ediary_frequency"] = edf if edf is not None else _FIELD_FALLBACKS["ediary_frequency"]
+
+    # monitoring_active
+    params["monitoring_active"] = bool(getattr(spec, "monitoring_active", _FIELD_FALLBACKS["monitoring_active"]))
+
+    # patient_support_program
+    params["patient_support_program"] = bool(getattr(spec, "patient_support_program", _FIELD_FALLBACKS["patient_support_program"]))
+
+    # randomization_ratio
+    rr = getattr(spec, "randomization_ratio", None)
+    params["randomization_ratio"] = rr if rr is not None else _FIELD_FALLBACKS["randomization_ratio"]
+
+    # blinded
+    params["blinded"] = bool(getattr(spec, "blinded", _FIELD_FALLBACKS["blinded"]))
+
+    # competitive_pressure
+    cp = getattr(spec, "competitive_pressure", None)
+    params["competitive_pressure"] = cp if cp is not None else _FIELD_FALLBACKS["competitive_pressure"]
+
+    # enrollment_rate_modifier
+    erm = getattr(spec, "enrollment_rate_modifier", None)
+    params["enrollment_rate_modifier"] = erm if erm is not None else _FIELD_FALLBACKS["enrollment_rate_modifier"]
+
+    # Retain legacy fields for backward compat
+    params["has_dsmb"]         = spec.has_dsmb
+    params["interim_analyses"] = spec.interim_analyses
 
     return params
 
@@ -116,19 +191,13 @@ async def upload_protocol(
 
     params = _spec_to_params(spec)
 
-    # Merge any extra fields extracted directly by the LLM (visits_per_month, etc.)
-    # that bypass the TrialSpec dataclass (they come back via spec.__dict__ raw extras)
-    # These are stored on spec if the LLM returned them in the new schema format.
-    for attr in ("visits_per_month", "visit_duration_hours", "invasive_procedures",
-                 "ediary_frequency", "monitoring_active", "patient_support_program",
-                 "randomization_ratio", "blinded", "competitive_pressure"):
-        val = getattr(spec, attr, None)
-        if val is not None:
-            params[attr] = val
-
     return ParsedProtocolResponse(
         title=spec.title,
+        document_type=spec.document_type,
         confidence=spec.extraction_confidence,
         assumed_fields=spec.assumed_fields,
         params=params,
+        field_sources=spec.field_sources,
+        field_reasoning=spec.field_reasoning,
+        summary=spec.summary,
     )

@@ -116,9 +116,13 @@ export interface SimulateRequest {
 
 export interface ParsedProtocol {
   title: string
+  document_type: string
   confidence: 'high' | 'medium' | 'low'
   assumed_fields: string[]
   params: Partial<SimulateRequest>
+  field_sources: Record<string, 'explicit' | 'inferred' | 'default'>
+  field_reasoning: Record<string, string>
+  summary: string
 }
 
 export async function simulate(req: SimulateRequest): Promise<SimulateResponse> {

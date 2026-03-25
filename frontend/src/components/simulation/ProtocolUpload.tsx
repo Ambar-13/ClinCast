@@ -91,7 +91,7 @@ export function ProtocolUpload({ onApply, openaiApiKey }: Props) {
         <div className="flex items-center gap-2">
           <FileText size={12} style={{ color: "var(--primary-600)" }} />
           <p className="kicker text-[10px]">Document Auto-fill</p>
-          <span className="rounded-full px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-widest"
+          <span className="rounded-full px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-widest"
             style={{ background: "rgba(7,160,195,0.08)", color: "var(--primary-700)", border: "1px solid rgba(7,160,195,0.15)" }}>
             AI
           </span>
@@ -183,7 +183,7 @@ export function ProtocolUpload({ onApply, openaiApiKey }: Props) {
                   {result.title}
                 </p>
                 <div className="flex items-center gap-1.5 mt-0.5">
-                  <span className="text-[9px] font-bold uppercase tracking-widest rounded-full px-1.5 py-0.5"
+                  <span className="text-[10px] font-bold uppercase tracking-widest rounded-full px-1.5 py-0.5"
                     style={{ background: "rgba(7,160,195,0.08)", color: "var(--primary-700)", border: "1px solid rgba(7,160,195,0.15)" }}>
                     {result.document_type || "Document"}
                   </span>
@@ -215,7 +215,7 @@ export function ProtocolUpload({ onApply, openaiApiKey }: Props) {
                       <span className="text-[10px]" style={{ color: "var(--ink-500)" }}>{FIELD_LABELS[k]}</span>
                       <div className="flex items-center gap-1.5">
                         {/* Source badge */}
-                        <span className="text-[9px] font-medium flex items-center gap-0.5"
+                        <span className="text-[10px] font-medium flex items-center gap-0.5"
                           style={{ color: src === "explicit" ? "#16a34a" : src === "inferred" ? "var(--primary-700)" : "var(--ink-300)" }}>
                           <span className="inline-block w-1.5 h-1.5 rounded-full"
                             style={{ background: src === "explicit" ? "#16a34a" : src === "inferred" ? "var(--primary-600)" : "var(--ink-300)" }} />
@@ -228,7 +228,7 @@ export function ProtocolUpload({ onApply, openaiApiKey }: Props) {
                     </div>
                     {/* Reasoning line for inferred fields */}
                     {src === "inferred" && reasoning && (
-                      <p className="text-[9px] mt-0.5 italic" style={{ color: "var(--ink-400)" }}>
+                      <p className="text-[10px] mt-0.5 italic" style={{ color: "var(--ink-400)" }}>
                         {reasoning.length > 90 ? reasoning.slice(0, 87) + "…" : reasoning}
                       </p>
                     )}

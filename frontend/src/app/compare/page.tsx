@@ -88,8 +88,8 @@ function OverlayChart({
 
   return (
     <div className="card-warm p-4">
-      <p className="kicker text-[10px] mb-0.5">{title}</p>
-      <p className="text-[11px] mb-3" style={{ color: "var(--ink-400)" }}>{sublabel}</p>
+      <p className="kicker text-[11px] mb-0.5">{title}</p>
+      <p className="text-xs mb-3" style={{ color: "var(--ink-400)" }}>{sublabel}</p>
       <ResponsiveContainer width="100%" height={180}>
         <ComposedChart data={merged} margin={{ top: 4, right: 4, bottom: 0, left: -20 }}>
           <CartesianGrid strokeDasharray="3 3" stroke="var(--border-warm)" />
@@ -130,8 +130,8 @@ function SiteActivationComparison({
   if (!hasDataA && !hasDataB) {
     return (
       <div className="card-warm p-5">
-        <p className="kicker text-[10px] mb-1">Site Activation Comparison</p>
-        <p className="text-[11px]" style={{ color: "var(--ink-400)" }}>
+        <p className="kicker text-[11px] mb-1">Site Activation Comparison</p>
+        <p className="text-xs" style={{ color: "var(--ink-400)" }}>
           No site activation data available — re-run simulations to see the site ramp-up curves here.
         </p>
       </div>
@@ -160,8 +160,8 @@ function SiteActivationComparison({
 
   return (
     <div className="card-warm p-4">
-      <p className="kicker text-[10px] mb-0.5">Site Activation Comparison</p>
-      <p className="text-[11px] mb-3" style={{ color: "var(--ink-400)" }}>
+      <p className="kicker text-[11px] mb-0.5">Site Activation Comparison</p>
+      <p className="text-xs mb-3" style={{ color: "var(--ink-400)" }}>
         Site ramp-up curves — A vs B (NCI median activation: 167 days / ~5.6 months)
       </p>
       <ResponsiveContainer width="100%" height={200}>
@@ -281,7 +281,7 @@ export default function ComparePage() {
           <div className="space-y-4" style={{ animation: "fadeIn 320ms ease both" }}>
             {/* Delta table */}
             <div className="card-raised p-5">
-              <p className="kicker text-[10px] mb-3">Metric Delta (B − A)</p>
+              <p className="kicker text-[11px] mb-3">Metric Delta (B − A)</p>
               <table className="w-full">
                 <thead>
                   <tr style={{ borderBottom: "1px solid var(--border-warm)" }}>

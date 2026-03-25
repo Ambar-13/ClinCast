@@ -14,14 +14,14 @@ interface Props {
 
 function Label({ children }: { children: React.ReactNode }) {
   return (
-    <span className="block text-[11px] font-medium mb-1" style={{ color: "var(--ink-600)" }}>
+    <span className="block text-xs font-medium mb-1" style={{ color: "var(--ink-600)" }}>
       {children}
     </span>
   );
 }
 
 function Hint({ children }: { children: React.ReactNode }) {
-  return <p className="mt-0.5 text-[10px] leading-4" style={{ color: "var(--ink-400)" }}>{children}</p>;
+  return <p className="mt-0.5 text-xs leading-4" style={{ color: "var(--ink-400)" }}>{children}</p>;
 }
 
 function Section({
@@ -35,7 +35,7 @@ function Section({
         onClick={() => setOpen(!open)}
         className="flex w-full items-center justify-between mb-3"
       >
-        <p className="kicker text-[10px]">{title}</p>
+        <p className="kicker text-xs">{title}</p>
         {open
           ? <ChevronUp size={12} style={{ color: "var(--ink-400)" }} />
           : <ChevronDown size={12} style={{ color: "var(--ink-400)" }} />}
@@ -200,7 +200,7 @@ function NctLookup({ onApply }: { onApply: (fields: Partial<SimulateRequest>) =>
       >
         <div className="flex items-center gap-2">
           <Search size={12} style={{ color: "var(--primary-600)" }} />
-          <span className="text-[11px] font-semibold" style={{ color: "var(--ink-700)" }}>
+          <span className="text-xs font-semibold" style={{ color: "var(--ink-700)" }}>
             Auto-fill from ClinicalTrials.gov
           </span>
         </div>
@@ -237,7 +237,7 @@ function NctLookup({ onApply }: { onApply: (fields: Partial<SimulateRequest>) =>
           </div>
 
           {error && (
-            <p className="text-[11px] rounded px-2 py-1.5"
+            <p className="text-xs rounded px-2 py-1.5"
               style={{ color: "#dc2626", background: "rgba(220,38,38,0.08)", border: "1px solid rgba(220,38,38,0.2)" }}>
               {error}
             </p>
@@ -249,11 +249,11 @@ function NctLookup({ onApply }: { onApply: (fields: Partial<SimulateRequest>) =>
               {/* Title + clear */}
               <div className="flex items-start justify-between gap-2">
                 <div className="flex items-start gap-2 min-w-0">
-                  <span className="mt-0.5 shrink-0 inline-flex items-center rounded-full px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-widest"
+                  <span className="mt-0.5 shrink-0 inline-flex items-center rounded-full px-1.5 py-0.5 text-[11px] font-bold uppercase tracking-widest"
                     style={{ background: "rgba(22,163,74,0.10)", color: "#16a34a", border: "1px solid rgba(22,163,74,0.25)" }}>
                     Applied
                   </span>
-                  <p className="text-[11px] font-medium leading-4" style={{ color: "var(--ink-800)" }}>
+                  <p className="text-xs font-medium leading-4" style={{ color: "var(--ink-800)" }}>
                     {result.title}
                   </p>
                 </div>
@@ -264,8 +264,8 @@ function NctLookup({ onApply }: { onApply: (fields: Partial<SimulateRequest>) =>
 
               {/* NCT ID + confidence */}
               <div className="flex items-center gap-2 flex-wrap">
-                <span className="font-mono text-[10px]" style={{ color: "var(--ink-500)" }}>{result.nct_id}</span>
-                <span className="inline-flex items-center rounded-full px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-widest"
+                <span className="font-mono text-xs" style={{ color: "var(--ink-500)" }}>{result.nct_id}</span>
+                <span className="inline-flex items-center rounded-full px-1.5 py-0.5 text-[11px] font-bold uppercase tracking-widest"
                   style={{ background: conf.bg, color: conf.text, border: `1px solid ${conf.border}` }}>
                   {result.extraction_confidence} confidence
                 </span>
@@ -277,7 +277,7 @@ function NctLookup({ onApply }: { onApply: (fields: Partial<SimulateRequest>) =>
                   <button
                     type="button"
                     onClick={() => setAssumed(!assumed)}
-                    className="flex items-center gap-1 text-[10px]"
+                    className="flex items-center gap-1 text-xs"
                     style={{ color: "var(--ink-400)" }}
                   >
                     <span>ⓘ {result.assumed_fields.length} field{result.assumed_fields.length !== 1 ? "s" : ""} inferred</span>
@@ -286,7 +286,7 @@ function NctLookup({ onApply }: { onApply: (fields: Partial<SimulateRequest>) =>
                   {assumed && (
                     <div className="mt-1.5 flex flex-wrap gap-1">
                       {result.assumed_fields.map((f) => (
-                        <span key={f} className="rounded px-1.5 py-0.5 font-mono text-[9px]"
+                        <span key={f} className="rounded px-1.5 py-0.5 font-mono text-[11px]"
                           style={{ background: "rgba(7,160,195,0.07)", color: "var(--primary-700)", border: "1px solid rgba(7,160,195,0.18)" }}>
                           {f}
                         </span>
@@ -396,7 +396,7 @@ export function TrialConfigPanel({ value, onChange, label }: Props) {
 
       {/* ── Policy narrative ─────────────────────────────────────────────── */}
       <div className="mb-5 rounded-lg px-4 py-3" style={{ background: "var(--surface-50)", border: "1px solid var(--border-warm)" }}>
-        <p className="text-[11px] font-semibold uppercase tracking-wider mb-1" style={{ color: "var(--ink-400)" }}>POLICY INTERPRETATION</p>
+        <p className="text-xs font-semibold uppercase tracking-wider mb-1" style={{ color: "var(--ink-400)" }}>POLICY INTERPRETATION</p>
         <p className="text-[13px] leading-relaxed" style={{ color: "var(--ink-700)" }}>{narrative}</p>
         <div className="mt-3 pt-3 grid grid-cols-3 gap-2 text-center" style={{ borderTop: "1px solid var(--border-warm)" }}>
           {[
@@ -404,13 +404,13 @@ export function TrialConfigPanel({ value, onChange, label }: Props) {
             { label: "Visit hrs",  val: value.visit_duration_hours ?? 1.5, lo: "0.5h = quick check-in\nSelf-report / vitals only", hi: "6h+ = intensive\nIV infusion + PK draws" },
           ].map(({ label, val, lo, hi }) => (
             <div key={label} className="rounded p-2" style={{ background: "var(--surface-100)" }}>
-              <p className="text-[10px] font-medium" style={{ color: "var(--ink-500)" }}>{label}</p>
+              <p className="text-xs font-medium" style={{ color: "var(--ink-500)" }}>{label}</p>
               <p className="text-[15px] font-bold" style={{ color: "var(--ink-800)" }}>{val}</p>
-              <p className="text-[10px] mt-0.5 whitespace-pre-line leading-tight" style={{ color: "var(--ink-400)" }}>{val <= (label === "Visits/mo" ? 1 : 1) ? lo : hi}</p>
+              <p className="text-xs mt-0.5 whitespace-pre-line leading-tight" style={{ color: "var(--ink-400)" }}>{val <= (label === "Visits/mo" ? 1 : 1) ? lo : hi}</p>
             </div>
           ))}
           <div className="rounded p-2" style={{ background: "var(--surface-100)" }}>
-            <p className="text-[10px] font-medium" style={{ color: "var(--ink-500)" }}>Burden tier</p>
+            <p className="text-xs font-medium" style={{ color: "var(--ink-500)" }}>Burden tier</p>
             {(() => {
               const visits = value.visits_per_month ?? 2;
               const hrs    = value.visit_duration_hours ?? 1.5;
@@ -419,8 +419,8 @@ export function TrialConfigPanel({ value, onChange, label }: Props) {
               const tier   = score >= 3 ? ["🔴", "HIGH", "#dc2626"] : score >= 1 ? ["🔵", "MEDIUM", "var(--primary-700)"] : ["🟢", "LOW", "#16a34a"];
               return <>
                 <p className="text-[18px]">{tier[0]}</p>
-                <p className="text-[11px] font-bold" style={{ color: tier[2] as string }}>{tier[1] as string}</p>
-                <p className="text-[10px] mt-0.5 leading-tight" style={{ color: "var(--ink-400)" }}>
+                <p className="text-xs font-bold" style={{ color: tier[2] as string }}>{tier[1] as string}</p>
+                <p className="text-xs mt-0.5 leading-tight" style={{ color: "var(--ink-400)" }}>
                   {score >= 3 ? "Expect high dropout" : score >= 1 ? "Moderate dropout risk" : "Retention-friendly"}
                 </p>
               </>;
@@ -441,7 +441,7 @@ export function TrialConfigPanel({ value, onChange, label }: Props) {
             <option key={ta.value} value={ta.value}>{ta.label}</option>
           ))}
         </select>
-        <p className="mt-1 text-[11px]" style={{ color: "var(--ink-400)" }}>
+        <p className="mt-1 text-xs" style={{ color: "var(--ink-400)" }}>
           {THERAPEUTIC_AREAS.find((t) => t.value === value.therapeutic_area)?.ref}
         </p>
       </div>

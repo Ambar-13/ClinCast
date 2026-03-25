@@ -21,8 +21,7 @@ The SMM objective is the weighted quadratic distance:
 where W = diag(1/SE²). Moments with smaller standard errors carry more
 weight because they were measured more precisely.
 
-This is the same calibration architecture as SwarmCast v2, adapted
-for clinical trial moments instead of GDPR/AI-Act moments.
+Calibration architecture adapted for clinical trial moments.
 """
 
 from __future__ import annotations
@@ -167,7 +166,7 @@ def latin_hypercube_sample(
 class MLPSurrogate:
     """Lightweight MLP trained on (θ, moments) pairs.
 
-    Architecture: 64-64-32 hidden layers with ReLU, following SwarmCast v2.
+    Architecture: 64-64-32 hidden layers with ReLU activations.
     Uses scikit-learn MLPRegressor so there is no PyTorch/JAX dependency.
 
     The surrogate makes Nelder-Mead tractable: each surrogate eval takes

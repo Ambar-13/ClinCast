@@ -5,14 +5,37 @@
  * Used as the empty state before a simulation is run on /analyze.
  *
  * Purely decorative — no data. Nodes pulse, edges animate a travelling dash,
- * and one hub node glows teal (the "policy" node) to anchor the eye.
+ * and the hub node cycles through clinical trial domain words.
  */
 
+import { useEffect, useState } from "react";
 import type { CSSProperties } from "react";
 
 // Fixed node layout (normalized 0–1 space, rendered in 320×220 viewport)
 const W = 320;
 const H = 220;
+
+// Clinical trial domain words that cycle on the hub
+const DOMAIN_WORDS = [
+  "Adherence",
+  "Enrollment",
+  "Dropout",
+  "Belief",
+  "Safety",
+  "Retention",
+  "Sites",
+  "Protocol",
+  "Outcomes",
+  "Efficacy",
+  "Fatigue",
+  "Burden",
+  "Trust",
+  "Survival",
+  "Dosing",
+  "Patients",
+  "Signals",
+  "Network",
+];
 
 interface Node {
   id: string;
@@ -31,41 +54,41 @@ interface Edge {
 }
 
 const NODES: Node[] = [
-  // Hub — the policy node
-  { id: "policy", x: 0.50, y: 0.42, r: 11, kind: "hub",   label: "Policy", delay: 0 },
-  // Large companies
-  { id: "lc1",    x: 0.20, y: 0.20, r: 7,  kind: "large",              delay: 0.1 },
-  { id: "lc2",    x: 0.78, y: 0.18, r: 7,  kind: "large",              delay: 0.2 },
-  // Mid companies
-  { id: "mc1",    x: 0.12, y: 0.62, r: 5,  kind: "mid",                delay: 0.15 },
-  { id: "mc2",    x: 0.36, y: 0.78, r: 5,  kind: "mid",                delay: 0.25 },
-  { id: "mc3",    x: 0.65, y: 0.75, r: 5,  kind: "mid",                delay: 0.3 },
-  { id: "mc4",    x: 0.88, y: 0.55, r: 5,  kind: "mid",                delay: 0.35 },
+  // Hub — the central node
+  { id: "hub", x: 0.50, y: 0.42, r: 11, kind: "hub", delay: 0 },
+  // Large nodes
+  { id: "lc1",    x: 0.20, y: 0.20, r: 7,  kind: "large", delay: 0.1 },
+  { id: "lc2",    x: 0.78, y: 0.18, r: 7,  kind: "large", delay: 0.2 },
+  // Mid nodes
+  { id: "mc1",    x: 0.12, y: 0.62, r: 5,  kind: "mid",   delay: 0.15 },
+  { id: "mc2",    x: 0.36, y: 0.78, r: 5,  kind: "mid",   delay: 0.25 },
+  { id: "mc3",    x: 0.65, y: 0.75, r: 5,  kind: "mid",   delay: 0.3 },
+  { id: "mc4",    x: 0.88, y: 0.55, r: 5,  kind: "mid",   delay: 0.35 },
   // Small nodes
-  { id: "s1",     x: 0.08, y: 0.35, r: 3.5, kind: "small",             delay: 0.05 },
-  { id: "s2",     x: 0.32, y: 0.12, r: 3.5, kind: "small",             delay: 0.12 },
-  { id: "s3",     x: 0.62, y: 0.10, r: 3.5, kind: "small",             delay: 0.18 },
-  { id: "s4",     x: 0.92, y: 0.30, r: 3.5, kind: "small",             delay: 0.22 },
-  { id: "s5",     x: 0.82, y: 0.82, r: 3.5, kind: "small",             delay: 0.28 },
-  { id: "s6",     x: 0.18, y: 0.85, r: 3.5, kind: "small",             delay: 0.32 },
+  { id: "s1",     x: 0.08, y: 0.35, r: 3.5, kind: "small", delay: 0.05 },
+  { id: "s2",     x: 0.32, y: 0.12, r: 3.5, kind: "small", delay: 0.12 },
+  { id: "s3",     x: 0.62, y: 0.10, r: 3.5, kind: "small", delay: 0.18 },
+  { id: "s4",     x: 0.92, y: 0.30, r: 3.5, kind: "small", delay: 0.22 },
+  { id: "s5",     x: 0.82, y: 0.82, r: 3.5, kind: "small", delay: 0.28 },
+  { id: "s6",     x: 0.18, y: 0.85, r: 3.5, kind: "small", delay: 0.32 },
 ];
 
 const EDGES: Edge[] = [
-  { from: "policy", to: "lc1",  delay: 0    },
-  { from: "policy", to: "lc2",  delay: 0.1  },
-  { from: "policy", to: "mc1",  delay: 0.2  },
-  { from: "policy", to: "mc3",  delay: 0.15 },
-  { from: "policy", to: "mc4",  delay: 0.25 },
-  { from: "lc1",    to: "s1",   delay: 0.3  },
-  { from: "lc1",    to: "s2",   delay: 0.35 },
-  { from: "lc1",    to: "mc2",  delay: 0.4  },
-  { from: "lc2",    to: "s3",   delay: 0.3  },
-  { from: "lc2",    to: "s4",   delay: 0.35 },
-  { from: "mc1",    to: "s6",   delay: 0.45 },
-  { from: "mc3",    to: "mc2",  delay: 0.5  },
-  { from: "mc3",    to: "s5",   delay: 0.4  },
-  { from: "mc4",    to: "s5",   delay: 0.45 },
-  { from: "mc4",    to: "s4",   delay: 0.5  },
+  { from: "hub", to: "lc1",  delay: 0    },
+  { from: "hub", to: "lc2",  delay: 0.1  },
+  { from: "hub", to: "mc1",  delay: 0.2  },
+  { from: "hub", to: "mc3",  delay: 0.15 },
+  { from: "hub", to: "mc4",  delay: 0.25 },
+  { from: "lc1", to: "s1",   delay: 0.3  },
+  { from: "lc1", to: "s2",   delay: 0.35 },
+  { from: "lc1", to: "mc2",  delay: 0.4  },
+  { from: "lc2", to: "s3",   delay: 0.3  },
+  { from: "lc2", to: "s4",   delay: 0.35 },
+  { from: "mc1", to: "s6",   delay: 0.45 },
+  { from: "mc3", to: "mc2",  delay: 0.5  },
+  { from: "mc3", to: "s5",   delay: 0.4  },
+  { from: "mc4", to: "s5",   delay: 0.45 },
+  { from: "mc4", to: "s4",   delay: 0.5  },
 ];
 
 const NODE_MAP = new Map(NODES.map((n) => [n.id, n]));
@@ -76,25 +99,39 @@ function py(n: Node) { return n.y * H; }
 function edgeLength(e: Edge): number {
   const a = NODE_MAP.get(e.from)!;
   const b = NODE_MAP.get(e.to)!;
-  // Round to 2dp so server and client render identical strings.
   return Math.round(Math.hypot(px(b) - px(a), py(b) - py(a)) * 100) / 100;
 }
 
+// Darker node fills — slightly more saturated teal tints
 const KIND_FILL: Record<Node["kind"], string> = {
   hub:   "var(--primary-700)",
-  large: "var(--surface-200)",
-  mid:   "var(--surface-200)",
-  small: "var(--surface-100)",
+  large: "#C8E8F2",
+  mid:   "#D8EFF6",
+  small: "#E6F4F9",
 };
 
 const KIND_STROKE: Record<Node["kind"], string> = {
   hub:   "var(--primary-600)",
-  large: "var(--border-strong)",
-  mid:   "var(--border-warm)",
-  small: "var(--border-warm)",
+  large: "rgba(8,103,136,0.35)",
+  mid:   "rgba(8,103,136,0.25)",
+  small: "rgba(8,103,136,0.18)",
 };
 
 export function AgentNetworkIdle({ style }: { style?: CSSProperties }) {
+  const [wordIdx, setWordIdx] = useState(0);
+  const [fading, setFading] = useState(false);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setFading(true);
+      setTimeout(() => {
+        setWordIdx((i) => (i + 1) % DOMAIN_WORDS.length);
+        setFading(false);
+      }, 300);
+    }, 1800);
+    return () => clearInterval(interval);
+  }, []);
+
   return (
     <svg
       viewBox={`0 0 ${W} ${H}`}
@@ -111,10 +148,9 @@ export function AgentNetworkIdle({ style }: { style?: CSSProperties }) {
 
         {/* Subtle drop shadow for large nodes */}
         <filter id="node-shadow" x="-40%" y="-40%" width="180%" height="180%">
-          <feDropShadow dx="0" dy="1" stdDeviation="2" floodColor="rgba(8,103,136,0.12)" />
+          <feDropShadow dx="0" dy="1" stdDeviation="2" floodColor="rgba(8,103,136,0.18)" />
         </filter>
 
-        {/* All keyframes in a single <style> — multiple insertions each force a full style recalc */}
         <style>{`
           @keyframes pulse-node{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(1.12);opacity:.85}}
           @keyframes pulse-halo{0%,100%{transform:scale(1);opacity:.18}50%{transform:scale(1.4);opacity:.05}}
@@ -138,9 +174,8 @@ export function AgentNetworkIdle({ style }: { style?: CSSProperties }) {
             key={`${e.from}-${e.to}`}
             x1={px(a)} y1={py(a)}
             x2={px(b)} y2={py(b)}
-            stroke="var(--border-strong)"
+            stroke="rgba(8,103,136,0.30)"
             strokeWidth={1}
-            strokeOpacity={0.55}
             strokeDasharray={`${dash} ${gap}`}
             style={{
               animation: `dash-${e.from}-${e.to} 3.2s ${e.delay + 0.4}s linear infinite`,
@@ -161,7 +196,6 @@ export function AgentNetworkIdle({ style }: { style?: CSSProperties }) {
 
         return (
           <g key={n.id}>
-            {/* Halo ring behind hub */}
             {isHub && (
               <circle
                 cx={cx} cy={cy}
@@ -185,18 +219,23 @@ export function AgentNetworkIdle({ style }: { style?: CSSProperties }) {
               filter={isHub ? "url(#hub-glow)" : n.kind === "large" ? "url(#node-shadow)" : undefined}
               style={pulseStyle}
             />
-            {/* Hub label */}
+            {/* Hub cycling word label */}
             {isHub && (
               <text
                 x={cx} y={cy + n.r + 12}
                 textAnchor="middle"
                 fontSize={9}
                 fontWeight={600}
-                letterSpacing="0.12em"
+                letterSpacing="0.10em"
                 fill="var(--primary-700)"
-                style={{ textTransform: "uppercase", fontFamily: "var(--font-inter), sans-serif" }}
+                style={{
+                  textTransform: "uppercase",
+                  fontFamily: "var(--font-inter), sans-serif",
+                  opacity: fading ? 0 : 1,
+                  transition: "opacity 0.3s ease",
+                }}
               >
-                Policy
+                {DOMAIN_WORDS[wordIdx]}
               </text>
             )}
           </g>

@@ -65,8 +65,8 @@ function MetricChart({
 }) {
   return (
     <div className="card-warm p-4">
-      <p className="kicker text-[10px] mb-0.5">{title}</p>
-      <p className="text-[11px] mb-3" style={{ color: "var(--ink-400)" }}>{sublabel}</p>
+      <p className="kicker text-[11px] mb-0.5">{title}</p>
+      <p className="text-xs mb-3" style={{ color: "var(--ink-400)" }}>{sublabel}</p>
       <ResponsiveContainer width="100%" height={180}>
         <ComposedChart data={data} margin={{ top: 4, right: 4, bottom: 0, left: -20 }}>
           <defs>
@@ -128,14 +128,14 @@ function MetricChart({
 function KpiCard({ label, value, sub, color }: { label: string; value: number; sub?: string; color?: string }) {
   return (
     <div className="card-warm p-4 text-center">
-      <p className="kicker text-[10px] mb-2">{label}</p>
+      <p className="kicker text-[11px] mb-2">{label}</p>
       <p
         className="metric-num text-2xl font-bold"
         style={{ color: color ?? "var(--ink-900)", letterSpacing: "-0.03em" }}
       >
         <AnimatedCounter value={value} formatter={(v) => `${v.toFixed(1)}%`} />
       </p>
-      {sub && <p className="mt-1 text-[11px]" style={{ color: "var(--ink-400)" }}>{sub}</p>}
+      {sub && <p className="mt-1 text-xs" style={{ color: "var(--ink-400)" }}>{sub}</p>}
     </div>
   );
 }
@@ -145,7 +145,7 @@ function KpiCard({ label, value, sub, color }: { label: string; value: number; s
 function ProvenanceStrip({ result }: { result: SimulateResponse }) {
   return (
     <div className="card-warm p-5">
-      <p className="kicker text-[10px] mb-3">Epistemic Provenance</p>
+      <p className="kicker text-[11px] mb-3">Epistemic Provenance</p>
       <div className="space-y-2 text-xs">
         {[
           { cls: "font-semibold", style: { color: "var(--success)" },  tag: "GROUNDED",    desc: "Directly fitted to published figures" },
@@ -153,13 +153,13 @@ function ProvenanceStrip({ result }: { result: SimulateResponse }) {
           { cls: "font-semibold", style: { color: "var(--danger)" },   tag: "ASSUMED",     desc: "No empirical anchor — sweep recommended" },
         ].map(({ cls, style, tag, desc }) => (
           <div key={tag} className="flex items-center gap-4">
-            <span className={`${cls} font-mono text-[10px] w-24 flex-shrink-0`} style={style}>{tag}</span>
+            <span className={`${cls} font-mono text-[11px] w-24 flex-shrink-0`} style={style}>{tag}</span>
             <span style={{ color: "var(--ink-500)" }}>{desc}</span>
           </div>
         ))}
       </div>
       <div
-        className="mt-3 pt-3 text-[11px]"
+        className="mt-3 pt-3 text-xs"
         style={{ borderTop: "1px solid var(--border-warm)", color: "var(--ink-500)" }}
       >
         <span className="font-semibold" style={{ color: "var(--ink-900)" }}>{result.assumed_count}</span>
@@ -250,17 +250,17 @@ function SwarmScatter({ votes, totalAgents }: { votes: SwarmMetadata["votes"]; t
     const q = QUADRANT[d.qk];
     const fmt = (v: number) => `${v >= 0 ? "+" : ""}${v.toFixed(1)}%`;
     return (
-      <div className="rounded-xl border p-3 max-w-[280px] text-[11px] shadow-lg"
+      <div className="rounded-xl border p-3 max-w-[280px] text-xs shadow-lg"
         style={{ background: "var(--surface-100)", borderColor: "var(--border-warm)", color: "var(--ink-700)" }}>
         <div className="flex items-center gap-1.5 mb-2">
           <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: q.color }} />
-          <span className="font-semibold text-[10px] uppercase tracking-wider" style={{ color: q.color }}>{q.label}</span>
+          <span className="font-semibold text-[11px] uppercase tracking-wider" style={{ color: q.color }}>{q.label}</span>
         </div>
         <p className="leading-4 mb-2" style={{ color: "var(--ink-600)" }}>{d.label}</p>
         {d.reasoning && (
           <p className="italic leading-4 mb-2" style={{ color: "var(--ink-500)" }}>"{d.reasoning}"</p>
         )}
-        <div className="flex gap-3 font-mono text-[10px] pt-1.5 border-t" style={{ borderColor: "var(--border-warm)" }}>
+        <div className="flex gap-3 font-mono text-[11px] pt-1.5 border-t" style={{ borderColor: "var(--border-warm)" }}>
           <span style={{ color: d.rawY >= 0 ? "#16a34a" : "#dc2626" }}>Belief {fmt(d.rawY)}</span>
           <span style={{ color: d.rawX >= 0 ? "#16a34a" : "#dc2626" }}>Adherence {fmt(d.rawX)}</span>
         </div>
@@ -271,15 +271,15 @@ function SwarmScatter({ votes, totalAgents }: { votes: SwarmMetadata["votes"]; t
   return (
     <div className="rounded-xl border overflow-hidden" style={{ background: "var(--surface-100)", borderColor: "var(--border-warm)" }}>
       <div className="px-4 pt-3 pb-1 flex items-center justify-between">
-        <p className="kicker text-[10px]">Agent Decision Map <span className="normal-case font-normal" style={{ color: "var(--ink-400)" }}>({n.toLocaleString()} of {totalAgents.toLocaleString()} agents)</span></p>
-        <p className="text-[10px]" style={{ color: "var(--ink-400)" }}>Hover for persona + reasoning</p>
+        <p className="kicker text-[11px]">Agent Decision Map <span className="normal-case font-normal" style={{ color: "var(--ink-400)" }}>({n.toLocaleString()} of {totalAgents.toLocaleString()} agents)</span></p>
+        <p className="text-[11px]" style={{ color: "var(--ink-400)" }}>Hover for persona + reasoning</p>
       </div>
       {/* Quadrant legend */}
       <div className="px-4 pb-2 flex flex-wrap gap-x-4 gap-y-1">
         {(Object.values(QUADRANT)).map((q) => (
           <div key={q.label} className="flex items-center gap-1.5">
             <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: q.color }} />
-            <span className="text-[10px]" style={{ color: "var(--ink-500)" }}>{q.label}</span>
+            <span className="text-[11px]" style={{ color: "var(--ink-500)" }}>{q.label}</span>
           </div>
         ))}
       </div>
@@ -335,13 +335,13 @@ function SwarmPanel({ meta }: { meta: SwarmMetadata }) {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <p className="kicker text-[10px]">Swarm Elicitation</p>
-          <span className="rounded-full px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-widest"
+          <p className="kicker text-[11px]">Swarm Elicitation</p>
+          <span className="rounded-full px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-widest"
             style={{ background: "rgba(7,160,195,0.10)", color: "var(--primary-700)", border: "1px solid rgba(7,160,195,0.25)" }}>
             SWARM-ELICITED
           </span>
         </div>
-        <p className="text-[11px]" style={{ color: "var(--ink-400)" }}>
+        <p className="text-xs" style={{ color: "var(--ink-400)" }}>
           <span className="metric-num font-semibold" style={{ color: "var(--ink-900)" }}>{meta.n_agents?.toLocaleString()}</span> agents
           {meta.n_failed > 0 && <span style={{ color: "var(--warning)" }}> · {meta.n_failed} failed</span>}
         </p>
@@ -354,11 +354,11 @@ function SwarmPanel({ meta }: { meta: SwarmMetadata }) {
           { label: "Adherence Shift", mean: meta.adherence_shift, std: meta.adherence_std, p10: meta.adherence_p10, p50: meta.adherence_p50, p90: meta.adherence_p90, max: 0.10 },
         ].map(({ label, mean, std, p10, p50, p90, max }) => (
           <div key={label} className="rounded-xl border p-3" style={{ background: "var(--surface-100)", borderColor: "var(--border-warm)" }}>
-            <p className="kicker text-[10px] mb-2">{label}</p>
+            <p className="kicker text-[11px] mb-2">{label}</p>
             <p className="metric-num text-xl font-bold mb-1" style={{ color: mean >= 0 ? "var(--success)" : "var(--danger)" }}>
               {fmt(mean)}
             </p>
-            <p className="text-[10px] mb-2" style={{ color: "var(--ink-400)" }}>
+            <p className="text-[11px] mb-2" style={{ color: "var(--ink-400)" }}>
               σ={fmt(std)} · p10={fmt(p10)} · p90={fmt(p90)}
             </p>
             <ShiftBar p10={p10} p50={p50} p90={p90} mean={mean} max={max} />
@@ -372,7 +372,7 @@ function SwarmPanel({ meta }: { meta: SwarmMetadata }) {
       {/* Agent cards — cap at 20 cards; scatter shows the full distribution */}
       {meta.votes?.length > 0 && (
         <div>
-          <p className="kicker text-[10px] mb-3">
+          <p className="kicker text-[11px] mb-3">
             Representative Agents (showing {Math.min(meta.votes.length, 20)} of {meta.n_agents?.toLocaleString()} — full distribution above)
           </p>
           <div className="space-y-2">
@@ -386,11 +386,11 @@ function SwarmPanel({ meta }: { meta: SwarmMetadata }) {
                   <div className="flex items-start justify-between gap-3 mb-2">
                     <div className="flex items-start gap-2 min-w-0">
                       <span className="mt-0.5 w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: q.color }} />
-                      <p className="text-[11px] leading-4" style={{ color: "var(--ink-700)" }}>
+                      <p className="text-xs leading-4" style={{ color: "var(--ink-700)" }}>
                         {v.label ?? v.persona ?? `Agent ${i + 1}`}
                       </p>
                     </div>
-                    <div className="flex gap-2.5 flex-shrink-0 font-mono text-[10px]">
+                    <div className="flex gap-2.5 flex-shrink-0 font-mono text-[11px]">
                       <span className="rounded px-1.5 py-0.5"
                         style={{ background: v.belief_shift >= 0 ? "rgba(22,163,74,0.10)" : "rgba(220,38,38,0.10)",
                                  color: v.belief_shift >= 0 ? "#16a34a" : "#dc2626" }}>
@@ -405,7 +405,7 @@ function SwarmPanel({ meta }: { meta: SwarmMetadata }) {
                   </div>
                   {/* Reasoning */}
                   {v.reasoning && (
-                    <p className="text-[11px] italic leading-4 pl-4.5"
+                    <p className="text-xs italic leading-4 pl-4.5"
                       style={{ color: "var(--ink-500)", paddingLeft: "18px" }}>
                       "{v.reasoning}"
                     </p>
@@ -434,8 +434,8 @@ function SiteActivationChart({ snaps, nSites }: { snaps: SimulateResponse["round
 
   return (
     <div className="card-warm p-4">
-      <p className="kicker text-[10px] mb-0.5">Site Activation Timeline</p>
-      <p className="text-[11px] mb-3" style={{ color: "var(--ink-400)" }}>
+      <p className="kicker text-[11px] mb-0.5">Site Activation Timeline</p>
+      <p className="text-xs mb-3" style={{ color: "var(--ink-400)" }}>
         Active sites ramping up over trial duration (S-curve)
       </p>
       <ResponsiveContainer width="100%" height={180}>
@@ -480,7 +480,7 @@ function SiteActivationChart({ snaps, nSites }: { snaps: SimulateResponse["round
           />
         </ComposedChart>
       </ResponsiveContainer>
-      <p className="mt-2 text-[10px]" style={{ color: "var(--ink-400)" }}>
+      <p className="mt-2 text-[11px]" style={{ color: "var(--ink-400)" }}>
         NCI median activation: 167 days (~5.6 months)
       </p>
     </div>

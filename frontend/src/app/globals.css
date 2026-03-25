@@ -5,9 +5,9 @@
 :root {
   /* Surfaces */
   --white:      #FFFFFF;
-  --surface-50: #FAFEFF;   /* nearly white, faintest teal hint */
-  --surface-100:#F2FAFC;   /* very light teal — card backgrounds */
-  --surface-200:#E4F4F9;   /* light teal — subtle separators, hover states */
+  --surface-50: #FCFEFF;   /* nearly white, faintest teal hint */
+  --surface-100:#F6FBFD;   /* very light teal — card backgrounds */
+  --surface-200:#EBF6FA;   /* light teal — subtle separators, hover states */
 
   /* Text */
   --ink-900:    #0A1628;

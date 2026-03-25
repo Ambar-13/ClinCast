@@ -102,7 +102,7 @@ function PolicyPanel({ onApply }: PolicyPanelProps) {
           <p className="text-sm font-medium text-left" style={{ color: "var(--ink-700)" }}>
             Sponsor Policy Override
           </p>
-          <p className="text-[11px] text-left mt-0.5" style={{ color: "var(--ink-400)" }}>
+          <p className="text-xs text-left mt-0.5" style={{ color: "var(--ink-400)" }}>
             High-level sliders that adjust trial parameters
           </p>
         </div>
@@ -117,7 +117,7 @@ function PolicyPanel({ onApply }: PolicyPanelProps) {
           {POLICY_SLIDERS.map((s) => (
             <div key={s.key}>
               <div className="flex items-center justify-between mb-1">
-                <span className="text-[11px] font-medium" style={{ color: "var(--ink-600)" }}>{s.label}</span>
+                <span className="text-xs font-medium" style={{ color: "var(--ink-600)" }}>{s.label}</span>
                 <span className="text-xs font-semibold font-mono" style={{ color: "var(--primary-700)" }}>
                   {values[s.key].toFixed(2)}
                 </span>
@@ -129,8 +129,8 @@ function PolicyPanel({ onApply }: PolicyPanelProps) {
                 className="w-full accent-[var(--primary-700)] h-1.5 cursor-pointer"
               />
               <div className="flex items-center justify-between mt-0.5">
-                <p className="text-[10px]" style={{ color: "var(--ink-400)" }}>{s.hint}</p>
-                <span className="font-mono text-[9px] rounded px-1.5 py-0.5"
+                <p className="text-[11px]" style={{ color: "var(--ink-400)" }}>{s.hint}</p>
+                <span className="font-mono text-[10px] rounded px-1.5 py-0.5"
                   style={{ background: "rgba(7,160,195,0.07)", color: "var(--primary-700)", border: "1px solid rgba(7,160,195,0.12)" }}>
                   {s.preview(values[s.key])}
                 </span>
@@ -139,7 +139,7 @@ function PolicyPanel({ onApply }: PolicyPanelProps) {
           ))}
 
           {error && (
-            <p className="text-[11px] rounded px-2 py-1.5"
+            <p className="text-xs rounded px-2 py-1.5"
               style={{ color: "#dc2626", background: "rgba(220,38,38,0.08)", border: "1px solid rgba(220,38,38,0.2)" }}>
               {error}
             </p>
@@ -272,7 +272,7 @@ export default function SimulatePage() {
                       <p className="text-sm font-medium" style={{ color: "var(--ink-700)" }}>
                         Swarm elicitation
                       </p>
-                      <span className="rounded-full px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-widest"
+                      <span className="rounded-full px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-widest"
                         style={{ background: "rgba(7,160,195,0.10)", color: "var(--primary-700)", border: "1px solid rgba(7,160,195,0.25)" }}>
                         SWARM-ELICITED
                       </span>
@@ -294,7 +294,7 @@ export default function SimulatePage() {
                     <input type="range" min={10} max={5000} step={10}
                       value={nAgents} onChange={(e) => setNAgents(Number(e.target.value))}
                       className="w-full accent-[var(--primary-700)] h-1.5 cursor-pointer" />
-                    <div className="flex justify-between text-[10px] mt-0.5" style={{ color: "var(--ink-300)" }}>
+                    <div className="flex justify-between text-[11px] mt-0.5" style={{ color: "var(--ink-300)" }}>
                       <span>10 agents</span><span>5,000 agents</span>
                     </div>
                   </div>
@@ -363,7 +363,7 @@ export default function SimulatePage() {
                   ].map(([label, value]) => (
                     <div key={label} className="rounded-xl border px-4 py-2.5 text-center"
                       style={{ background: "var(--surface-100)", borderColor: "var(--border-warm)" }}>
-                      <p className="kicker text-[10px]">{label}</p>
+                      <p className="kicker text-[11px]">{label}</p>
                       <p className="metric-num mt-1 text-base font-bold" style={{ color: "var(--ink-900)" }}>{value}</p>
                     </div>
                   ))}

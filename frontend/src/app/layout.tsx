@@ -1,20 +1,20 @@
 import type { Metadata } from "next";
-import localFont from "next/font/local";
+import { Nunito, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { Providers } from "@/components/layout/Providers";
 
-const geistSans = localFont({
-  src: "./GeistVF.woff",
+const nunito = Nunito({
+  subsets: ["latin"],
   variable: "--font-inter",
   display: "swap",
-  weight: "100 900",
+  weight: ["300", "400", "500", "600", "700", "800"],
 });
 
-const geistMono = localFont({
-  src: "./GeistMonoVF.woff",
+const jetbrainsMono = JetBrains_Mono({
+  subsets: ["latin"],
   variable: "--font-jetbrains-mono",
   display: "swap",
-  weight: "100 900",
+  weight: ["400", "500", "600"],
 });
 
 export const metadata: Metadata = {
@@ -26,7 +26,7 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
-      <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
+      <body className={`${nunito.variable} ${jetbrainsMono.variable} antialiased`}>
         <Providers>{children}</Providers>
       </body>
     </html>

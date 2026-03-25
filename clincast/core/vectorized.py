@@ -20,10 +20,8 @@ State per patient (one float32 per column):
                   Population conservation: inflows to 1 equal outflows from 0;
                   outflows from 1 go to 2 or 3.
 
-Design follows the Bank of England housing market ABM (Baptista et al., 2016)
-and the IIASA macroeconomic ABM (Dosi et al., 2010) in using rule-based
-heterogeneous agents for population dynamics while reserving LLM deliberation
-for the small persona-agent swarm layer.
+Rule-based heterogeneous agents handle population dynamics; LLM deliberation
+is reserved for the small persona-agent swarm layer (optional, ~20-40s overhead).
 """
 
 from __future__ import annotations

@@ -10,7 +10,7 @@ app = FastAPI(
     version="0.1.0",
     description=(
         "Clinical trial behavioral simulation engine. "
-        "Apache 2.0 — open-source alternative to Intera."
+        "Apache 2.0 — open-source."
     ),
     docs_url="/docs",
     redoc_url="/redoc",

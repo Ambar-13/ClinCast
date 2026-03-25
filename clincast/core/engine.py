@@ -1,6 +1,6 @@
 """Main simulation loop — orchestrates all components per round.
 
-Per-round flow (follows Sterman 2000 Ch. 3 simulation order):
+Per-round flow:
   1. Enrollment: move screening patients to enrolled (Poisson draw from site rates).
   2. Belief propagation: DeGroot averaging on patient social network.
   3. Optional injection: apply any InjectionEvent firing this round.
@@ -23,7 +23,7 @@ shift the vectorized parameters within bounded ranges. This adds ~20-40s
 but provides a reasoning trace for non-technical stakeholders.
 
 All LLM-influenced parameters are tagged [SWARM-ELICITED] in outputs.
-Voting follows the same bounded-range constraint used in SwarmCast v2.
+Votes shift vectorized parameters within bounded ranges.
 """
 
 from __future__ import annotations

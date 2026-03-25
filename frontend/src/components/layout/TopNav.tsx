@@ -23,22 +23,31 @@ export function TopNav() {
     >
       {/* Logo */}
       <Link href="/" className="mr-6 flex flex-shrink-0 items-center gap-2">
-        {/* Flask icon */}
-        <svg viewBox="0 0 32 32" width="28" height="28" fill="none" xmlns="http://www.w3.org/2000/svg">
+        {/* Flask + robot companion */}
+        <svg viewBox="0 0 40 32" width="35" height="28" fill="none" xmlns="http://www.w3.org/2000/svg">
+          {/* Flask */}
           <path d="M12 4v10L6 24a2 2 0 001.8 2.8h16.4A2 2 0 0026 24L20 14V4" stroke="#FED766" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
           <path d="M10 4h12" stroke="#FED766" strokeWidth="1.8" strokeLinecap="round"/>
           <circle cx="12" cy="22" r="1.5" fill="#07A0C3" opacity="0.9"/>
           <circle cx="17" cy="24" r="1" fill="#07A0C3" opacity="0.7"/>
           <circle cx="20" cy="21" r="1.2" fill="#07A0C3" opacity="0.8"/>
+          {/* Robot companion */}
+          {/* Antenna */}
+          <line x1="34" y1="15" x2="34" y2="12" stroke="#07A0C3" strokeWidth="1.2" strokeLinecap="round"/>
+          <circle cx="34" cy="11" r="1.2" fill="#07A0C3"/>
+          {/* Head */}
+          <rect x="29.5" y="15" width="9" height="7.5" rx="2" fill="#07A0C3"/>
+          {/* Eyes */}
+          <circle cx="32.2" cy="18.2" r="1.1" fill="white" opacity="0.9"/>
+          <circle cx="36.8" cy="18.2" r="1.1" fill="white" opacity="0.9"/>
+          {/* Pupils */}
+          <circle cx="32.5" cy="18.4" r="0.5" fill="#086788"/>
+          <circle cx="37.1" cy="18.4" r="0.5" fill="#086788"/>
+          {/* Mouth line */}
+          <path d="M32 21.2 Q34 22.2 37 21.2" stroke="white" strokeWidth="0.8" strokeLinecap="round" fill="none" opacity="0.7"/>
         </svg>
         <span className="hidden text-sm font-semibold sm:block" style={{ color: "var(--ink-900)" }}>
           ClinCast
-        </span>
-        <span
-          className="hidden rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-widest sm:block"
-          style={{ background: "rgba(7,160,195,0.10)", color: "var(--primary-700)", border: "1px solid rgba(7,160,195,0.20)" }}
-        >
-          Apache 2.0
         </span>
       </Link>
 

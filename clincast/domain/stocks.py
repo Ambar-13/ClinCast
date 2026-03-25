@@ -1,20 +1,21 @@
 """Trial stock-flow model — conservation-law compliant.
 
-Follows Sterman (2000) Business Dynamics:
-  Ch. 11, Sec. 11.7 (Erlang/delay mathematics):
-    Material delays use third-order Erlang (DELAY3) structures for
-    sequential pipeline stages (referral → screening → enrolled → completing).
-    Information delays use first-order SMOOTH for perceived signals
-    (perceived enrollment rate, perceived site burden).
-  Ch. 12, Sec. 12.1 (Aging chains and coflows):
-    Patient pipeline implemented as a multi-stock aging chain; coflows
-    track per-patient attributes (AE load, adherence) alongside the
-    main population stock.
-  Ch. 21, Sec. 21.4.3 (Dimensional consistency test):
-    Every variable carries real-world units per Sterman p. 858.
+Stock-flow structure:
+  Material delays use third-order Erlang (DELAY3) structures for sequential
+  pipeline stages (referral → screening → enrolled → completing). This
+  distributes transit time more realistically than a single exponential.
+  Information delays use first-order smoothing for perceived signals
+  (perceived enrollment rate, perceived site burden).
+
+  Patient pipeline implemented as a multi-stock aging chain; coflows
+  track per-patient attributes (AE load, adherence) alongside the
+  main population stock.
+
+  Every variable carries real-world units:
     Stocks: patients (absolute count).
     Flows: patients/month.
     Burden/quality indices: dimensionless [0, 1].
+
   Conservation: Screened + Enrolled + Dropout + Completed = N_total at all t.
     Validated by PatientPipelineStock.conservation_check() called every round.
   Validation framework: Barlas (1996) System Dynamics Review 12(3):183–210;
@@ -138,8 +139,8 @@ class PatientPipelineStock:
 class EnrollmentVelocityStock:
     """Information stock: perceived enrollment rate.
 
-    Uses first-order SMOOTH (DELAY1) as recommended by Sterman 2000 Ch. 11
-    for information delays. The perceived rate lags the actual rate with
+    Uses first-order smoothing (DELAY1) for information delays. The perceived
+    rate lags the actual rate with
     time constant τ_enroll (adjustment period for sponsors to recognize
     enrollment shortfall and respond with recruitment intensification).
     """
@@ -235,8 +236,8 @@ class SiteActivationPipeline:
     (AACI/NCI, 2018). Industry average: 78–313 days observed range.
 
     Three equal-stage Erlang delay (DELAY3) reproduces the peaked distribution of
-    activation times better than a single exponential. Sterman (2000) Ch. 11 §11.7:
-    DELAY3 has variance 1/3 of DELAY1 for same mean — gives realistic 'pipeline' shape.
+    activation times better than a single exponential. DELAY3 has variance 1/3 of
+    DELAY1 for the same mean — gives a realistic pipeline shape.
 
     Mean total delay = 5.6 months (167 days / 30). Each stage = 5.6/3 = 1.87 months.
 

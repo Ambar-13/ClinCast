@@ -74,7 +74,7 @@ export function TopNav() {
       {/* Right side */}
       <div className="ml-auto">
         <a
-          href="https://github.com/ambar/clincast"
+          href="https://github.com/Ambar-13/ClinCast"
           target="_blank"
           rel="noreferrer"
           className="flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors"

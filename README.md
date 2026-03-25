@@ -13,9 +13,9 @@
   [![Next.js](https://img.shields.io/badge/Next.js-15-086788.svg)](https://nextjs.org)
 </div>
 
-| Configure | Simulate |
-|---|---|
-| ![ClinFish configure](docs/ui.png) | ![ClinFish results](docs/ui-simulation.png) |
+| Configure | Results | Results |
+|---|---|---|
+| ![ClinFish configure](docs/ui.png) | ![ClinFish results](docs/ui-results.png) | ![ClinFish simulation](docs/ui-simulation.png) |
 
 ---
 

@@ -602,10 +602,16 @@ def _call_llm(client: object, is_openai: bool, prompt: str) -> dict:
             messages=[{"role": "user", "content": prompt}],
         )
         raw = resp.content[0].text.strip()
+    # Strip markdown code fences
     if raw.startswith("```"):
         raw = raw.split("```")[1]
         if raw.startswith("json"):
             raw = raw[4:]
+    # Extract JSON object even if model wraps it in prose
+    if "{" in raw:
+        raw = raw[raw.index("{"):]
+    if "}" in raw:
+        raw = raw[:raw.rindex("}") + 1]
     return _json.loads(raw)
 
 

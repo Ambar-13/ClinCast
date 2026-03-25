@@ -22,7 +22,7 @@ const DEFAULT_B: SimulateRequest = {
 };
 
 const TOOLTIP_STYLE = {
-  background: "var(--cream-100)", border: "1px solid var(--border-warm)",
+  background: "var(--surface-50)", border: "1px solid var(--border-warm)",
   borderRadius: 10, fontSize: 11, color: "var(--ink-900)", boxShadow: "var(--shadow-card)",
 };
 
@@ -97,8 +97,8 @@ function OverlayChart({
           <YAxis tick={{ fontSize: 9, fill: "var(--ink-400)" }} tickFormatter={(v) => `${v}%`} />
           <Tooltip contentStyle={TOOLTIP_STYLE} labelFormatter={(v) => `Month ${v}`} />
           <Legend wrapperStyle={{ fontSize: 10, color: "var(--ink-500)", paddingTop: 4 }} />
-          <Area type="monotone" dataKey={metricA} fill="rgba(139,26,26,0.06)" stroke="none" />
-          <Line type="monotone" dataKey={metricA} name="Scenario A" stroke="var(--crimson-700)" dot={false} strokeWidth={2} />
+          <Area type="monotone" dataKey={metricA} fill="rgba(7,160,195,0.06)" stroke="none" />
+          <Line type="monotone" dataKey={metricA} name="Scenario A" stroke="var(--primary-700)" dot={false} strokeWidth={2} />
           <Line type="monotone" dataKey={metricB} name="Scenario B" stroke="var(--chart-enforcement)" dot={false} strokeWidth={2} strokeDasharray="4 3" />
         </ComposedChart>
       </ResponsiveContainer>
@@ -184,12 +184,12 @@ function SiteActivationComparison({
             formatter={(value) => value === "activeSitesA" ? "Scenario A" : "Scenario B"}
           />
           {hasDataA && nSitesA !== nSitesB && (
-            <ReferenceLine y={nSitesA} strokeDasharray="3 3" stroke="rgba(139,26,26,0.3)" strokeWidth={1} />
+            <ReferenceLine y={nSitesA} strokeDasharray="3 3" stroke="rgba(7,160,195,0.3)" strokeWidth={1} />
           )}
           <ReferenceLine y={maxSites} strokeDasharray="4 3" stroke="var(--ink-300)" strokeWidth={1.5} />
           {hasDataA && (
             <Line type="monotone" dataKey="activeSitesA" name="activeSitesA"
-              stroke="var(--crimson-700)" dot={false} strokeWidth={2} connectNulls />
+              stroke="var(--primary-700)" dot={false} strokeWidth={2} connectNulls />
           )}
           {hasDataB && (
             <Line type="monotone" dataKey="activeSitesB" name="activeSitesB"

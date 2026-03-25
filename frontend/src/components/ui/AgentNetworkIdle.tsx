@@ -5,7 +5,7 @@
  * Used as the empty state before a simulation is run on /analyze.
  *
  * Purely decorative — no data. Nodes pulse, edges animate a travelling dash,
- * and one hub node glows crimson (the "policy" node) to anchor the eye.
+ * and one hub node glows teal (the "policy" node) to anchor the eye.
  */
 
 import type { CSSProperties } from "react";
@@ -81,14 +81,14 @@ function edgeLength(e: Edge): number {
 }
 
 const KIND_FILL: Record<Node["kind"], string> = {
-  hub:   "var(--crimson-700)",
-  large: "var(--cream-300)",
-  mid:   "var(--cream-300)",
-  small: "var(--cream-200)",
+  hub:   "var(--primary-700)",
+  large: "var(--surface-200)",
+  mid:   "var(--surface-200)",
+  small: "var(--surface-100)",
 };
 
 const KIND_STROKE: Record<Node["kind"], string> = {
-  hub:   "var(--crimson-600)",
+  hub:   "var(--primary-600)",
   large: "var(--border-strong)",
   mid:   "var(--border-warm)",
   small: "var(--border-warm)",
@@ -111,7 +111,7 @@ export function AgentNetworkIdle({ style }: { style?: CSSProperties }) {
 
         {/* Subtle drop shadow for large nodes */}
         <filter id="node-shadow" x="-40%" y="-40%" width="180%" height="180%">
-          <feDropShadow dx="0" dy="1" stdDeviation="2" floodColor="rgba(26,18,8,0.12)" />
+          <feDropShadow dx="0" dy="1" stdDeviation="2" floodColor="rgba(8,103,136,0.12)" />
         </filter>
 
         {/* All keyframes in a single <style> — multiple insertions each force a full style recalc */}
@@ -167,7 +167,7 @@ export function AgentNetworkIdle({ style }: { style?: CSSProperties }) {
                 cx={cx} cy={cy}
                 r={n.r + 7}
                 fill="none"
-                stroke="var(--crimson-700)"
+                stroke="var(--primary-700)"
                 strokeWidth={1}
                 strokeOpacity={0.18}
                 style={{
@@ -193,7 +193,7 @@ export function AgentNetworkIdle({ style }: { style?: CSSProperties }) {
                 fontSize={9}
                 fontWeight={600}
                 letterSpacing="0.12em"
-                fill="var(--crimson-700)"
+                fill="var(--primary-700)"
                 style={{ textTransform: "uppercase", fontFamily: "var(--font-inter), sans-serif" }}
               >
                 Policy

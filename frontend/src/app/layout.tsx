@@ -18,8 +18,9 @@ const geistMono = localFont({
 });
 
 export const metadata: Metadata = {
-  title: "ClinCast — Clinical Trial Simulation",
+  title: "ClinCast",
   description: "Open-source behavioral simulation engine for clinical trials. Apache 2.0.",
+  themeColor: "#086788",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

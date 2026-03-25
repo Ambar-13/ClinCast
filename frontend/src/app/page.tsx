@@ -30,15 +30,19 @@ const DEFAULT: SimulateRequest = {
 
 export default function SimulatePage() {
   const [req,       setReq]       = useState<SimulateRequest>(DEFAULT);
-  const [useSwarm,  setUseSwarm]  = useState(false);
-  const [nAgents,   setNAgents]   = useState(1000);
+  const [useSwarm,  setUseSwarm]  = useState(() =>
+    typeof window !== "undefined" ? localStorage.getItem("clincast_swarm") !== "false" : true
+  );
+  const [nAgents,   setNAgents]   = useState(() =>
+    typeof window !== "undefined" ? +(localStorage.getItem("clincast_nagents") ?? 1000) : 1000
+  );
   const [apiKey,    setApiKey]    = useState(() =>
     typeof window !== "undefined" ? (localStorage.getItem("clincast_openai_key") ?? "") : ""
   );
 
-  useEffect(() => {
-    localStorage.setItem("clincast_openai_key", apiKey);
-  }, [apiKey]);
+  useEffect(() => { localStorage.setItem("clincast_openai_key", apiKey); }, [apiKey]);
+  useEffect(() => { localStorage.setItem("clincast_swarm",      String(useSwarm)); }, [useSwarm]);
+  useEffect(() => { localStorage.setItem("clincast_nagents",    String(nAgents)); }, [nAgents]);
   const [result,    setResult]    = useState<SimulateResponse | null>(null);
   const [loading,   setLoading]   = useState(false);
   const [error,     setError]     = useState<string | null>(null);

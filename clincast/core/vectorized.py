@@ -139,7 +139,7 @@ class PopulationArray:
 
         # Neuroticism: Beta(3, 4) mean≈0.43 — slight negative skew for trial enrollees
         # (self-selection: very high-N patients are less likely to enroll)
-        # Bogg & Roberts 2004: N r≈-0.09 to -0.15 with health behaviors [GROUNDED direction]
+        # West Sweden PMC3065484: multivariate β=-0.029 (N→adherence) [GROUNDED direction]
         # [Beta prior ASSUMED]
         state[:, COL_NEUROTICISM] = rng.beta(3.0, 4.0, size=n).astype(np.float32)
 

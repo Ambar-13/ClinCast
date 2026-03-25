@@ -463,9 +463,10 @@ def adherence_probability(
         Coefficient deflated (0.15) from bivariate r to account for archetype overlap.
         [GROUNDED direction; coefficient magnitude DIRECTIONAL]
       - Neuroticism: higher N → lower adherence.
-        Bogg & Roberts (2004): r≈-0.09 to -0.15 for N→health behaviors (weaker than C).
-        Coefficient -0.08 deflated from r to account for archetype overlap with
-        TREATMENT_NAIVE_HIGH_ANXIETY archetype.
+        West Sweden Heart Failure Registry (PMC3065484): multivariate β=-0.029 (N→adherence).
+        Molloy et al. (2014) meta-analysis: pooled r≈-0.10, inflated by confounding.
+        Multivariate estimate used: β_N=0.05, deflated from bivariate r≈0.10 to account
+        for archetype overlap with TREATMENT_NAIVE_HIGH_ANXIETY.
         [GROUNDED direction; coefficient magnitude DIRECTIONAL]
       - Personal Control (IPQ-R): higher PC → higher adherence.
         Hagger & Orbell (2003) meta: r=0.21 for IPQ-R PC→coping/adaptation.
@@ -520,10 +521,11 @@ def adherence_probability(
     # baseline already absorbing mean-level personality differences per archetype.
     if conscientiousness is not None or neuroticism is not None or personal_control is not None:
         c_effect  = 0.15 * ((conscientiousness  - 0.5) if conscientiousness  is not None else np.zeros_like(base))
-        n_effect  = 0.08 * ((neuroticism        - 0.5) if neuroticism        is not None else np.zeros_like(base))
+        n_effect  = 0.05 * ((neuroticism        - 0.5) if neuroticism        is not None else np.zeros_like(base))
         pc_effect = 0.08 * ((personal_control   - 0.5) if personal_control   is not None else np.zeros_like(base))
-        # Bogg & Roberts 2004 [GROUNDED direction; DIRECTIONAL magnitude]
-        # Hagger & Orbell 2003 [GROUNDED direction; DIRECTIONAL magnitude]
+        # C: Bogg & Roberts 2004 meta [GROUNDED direction; DIRECTIONAL magnitude]
+        # N: West Sweden PMC3065484 multivariate β=-0.029; β_N=0.05 deflated [DIRECTIONAL magnitude]
+        # PC: Hagger & Orbell 2003 meta r=0.21 [GROUNDED direction; DIRECTIONAL magnitude]
         personality_modifier = np.clip(1.0 + c_effect - n_effect + pc_effect, 0.7, 1.3)
         base *= personality_modifier
 

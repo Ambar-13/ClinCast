@@ -45,7 +45,8 @@ from clincast.core.vectorized import (
     STATUS_SCREENING, STATUS_ENROLLED, STATUS_DROPOUT, STATUS_COMPLETED,
     COL_BELIEF, COL_ADHERENCE_PROB, COL_DROPOUT_HAZARD,
     COL_CUMULATIVE_AE, COL_VISIT_BURDEN, COL_STATUS,
-    COL_INSTITUTIONAL_TRUST,
+    COL_INSTITUTIONAL_TRUST, COL_TRIAL_FATIGUE,
+    COL_CONSCIENTIOUSNESS, COL_NEUROTICISM, COL_PERSONAL_CONTROL,
 )
 from clincast.domain.agents import (
     PatientPopulationConfig,
@@ -331,6 +332,10 @@ def run_simulation(config: SimConfig) -> TrialOutputs:
             protocol_burden=config.protocol_burden,
             time_months=t_months,
             institutional_trust=pop.state[enrolled_idx, COL_INSTITUTIONAL_TRUST],
+            trial_fatigue=pop.state[enrolled_idx, COL_TRIAL_FATIGUE],
+            conscientiousness=pop.state[enrolled_idx, COL_CONSCIENTIOUSNESS],
+            neuroticism=pop.state[enrolled_idx, COL_NEUROTICISM],
+            personal_control=pop.state[enrolled_idx, COL_PERSONAL_CONTROL],
         )
         pop.state[enrolled_idx, COL_ADHERENCE_PROB] = adh
 
@@ -368,6 +373,22 @@ def run_simulation(config: SimConfig) -> TrialOutputs:
                 new_ae_grades=new_ae_pairs,
             ) - pop.state[:, COL_CUMULATIVE_AE]  # pass delta
         )
+
+        # 5b. Trial fatigue accumulation (enrolled patients only)
+        # Inflow: visit frequency + AE occurrence each round.
+        # Outflow: first-order recovery (τ=6mo). [DIRECTIONAL — Montori Cumulative Complexity
+        # Model (PMID 27417747); τ and coefficients ASSUMED; sweep τ ∈ [3, 12]]
+        fatigue = pop.state[enrolled_idx, COL_TRIAL_FATIGUE]
+        # Visit inflow: normalized visits per month → fraction of max monthly burden (8 vpm)
+        visit_inflow = 0.04 * (config.visits_per_month / 8.0)  # [ASSUMED]
+        # AE inflow: fraction of patients experiencing an AE this round
+        ae_frac = float(ae_occurs.mean()) if len(ae_occurs) > 0 else 0.0
+        ae_inflow = 0.06 * ae_frac  # [ASSUMED magnitude]
+        # Recovery outflow: first-order, τ=6mo
+        recovery_outflow = fatigue / 6.0
+        pop.state[enrolled_idx, COL_TRIAL_FATIGUE] = np.clip(
+            fatigue + visit_inflow + ae_inflow - recovery_outflow, 0.0, 1.0,
+        ).astype(np.float32)
 
         # 6. Dropout: Bernoulli draw from Weibull hazard (per-patient time)
         # Use individual time-since-enrollment so κ≠1 hazard is anchored to each

@@ -163,7 +163,7 @@ export async function compare(
 }
 
 export async function lookupNct(nctId: string): Promise<NctLookupResult> {
-  const res = await fetch(`${BASE}/nct/${nctId.toUpperCase()}`)
+  const res = await fetch(`${BASE}/simulate/nct/${nctId.toUpperCase()}`)
   if (!res.ok) {
     const err = await res.json().catch(() => ({ detail: res.statusText }))
     throw new Error(err.detail ?? 'NCT lookup failed')
@@ -193,7 +193,7 @@ export interface NctLookupResult {
 }
 
 export async function applyPolicy(policyConfig: Record<string, number>): Promise<PolicyResult> {
-  const res = await fetch(`${BASE}/policy`, {
+  const res = await fetch(`${BASE}/simulate/policy`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(policyConfig),

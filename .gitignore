@@ -17,8 +17,8 @@ share/python-wheels/
 MANIFEST
 develop-eggs/
 downloads/
-lib/
-lib64/
+/lib/
+/lib64/
 
 # Virtual environments
 .env

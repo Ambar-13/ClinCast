@@ -75,14 +75,7 @@ function PolicyPanel({ onApply }: PolicyPanelProps) {
     setError(null);
     try {
       const res = await applyPolicy(values);
-      // Map returned params to SimulateRequest patch
-      const patch: Partial<SimulateRequest> = {};
-      for (const [k, v] of Object.entries(res.params)) {
-        if (k in ({} as SimulateRequest)) {
-          (patch as Record<string, unknown>)[k] = v;
-        }
-      }
-      onApply(patch);
+      onApply(res.params as Partial<SimulateRequest>);
       setApplied(true);
     } catch (e) {
       setError((e as Error).message);

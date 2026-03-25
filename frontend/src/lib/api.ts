@@ -198,7 +198,12 @@ export async function applyPolicy(policyConfig: Record<string, number>): Promise
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(policyConfig),
   })
-  if (!res.ok) throw new Error('Policy application failed')
+  if (!res.ok) {
+    const err = await res.text().catch(() => '')
+    let msg = err
+    try { msg = JSON.parse(err).detail ?? err } catch {}
+    throw new Error(`Policy failed (${res.status}): ${msg}`)
+  }
   return res.json()
 }
 

@@ -3,6 +3,20 @@ const BASE = typeof window !== 'undefined' &&
   ? 'http://localhost:8000'
   : '/api'
 
+async function apiFetch(url: string, init?: RequestInit): Promise<Response> {
+  let res: Response
+  try {
+    res = await fetch(url, init)
+  } catch {
+    throw new Error('Backend not reachable — run: uvicorn api.main:app --reload')
+  }
+  if (res.status === 404) {
+    // Next.js returns 404 when it can't proxy to the backend
+    throw new Error('Backend not reachable — run: uvicorn api.main:app --reload')
+  }
+  return res
+}
+
 export const THERAPEUTIC_AREAS = [
   { value: 'cns',            label: 'CNS / Schizophrenia',     ref: 'CATIE (NEJM 2005)' },
   { value: 'oncology',       label: 'Oncology',                ref: 'Tufts CSDD 2019' },
@@ -130,7 +144,7 @@ export interface ParsedProtocol {
 export async function simulate(req: SimulateRequest): Promise<SimulateResponse> {
   const ctrl = new AbortController()
   const timer = setTimeout(() => ctrl.abort(), 300_000) // 5 min — swarm can be large
-  const res = await fetch(`${BASE}/simulate`, {
+  const res = await apiFetch(`${BASE}/simulate`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ ...req, use_preset: req.use_preset ?? true }),
@@ -149,7 +163,7 @@ export async function compare(
   a: SimulateRequest,
   b: SimulateRequest,
 ): Promise<CompareResponse> {
-  const res = await fetch(`${BASE}/simulate/compare`, {
+  const res = await apiFetch(`${BASE}/simulate/compare`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ scenario_a: a, scenario_b: b }),
@@ -164,7 +178,7 @@ export async function compare(
 }
 
 export async function lookupNct(nctId: string): Promise<NctLookupResult> {
-  const res = await fetch(`${BASE}/simulate/nct/${nctId.toUpperCase()}`)
+  const res = await apiFetch(`${BASE}/simulate/nct/${nctId.toUpperCase()}`)
   if (!res.ok) {
     const err = await res.json().catch(() => ({ detail: res.statusText }))
     throw new Error(err.detail ?? 'NCT lookup failed')
@@ -194,7 +208,7 @@ export interface NctLookupResult {
 }
 
 export async function applyPolicy(policyConfig: Record<string, number>): Promise<PolicyResult> {
-  const res = await fetch(`${BASE}/simulate/policy`, {
+  const res = await apiFetch(`${BASE}/simulate/policy`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(policyConfig),

@@ -1,4 +1,6 @@
-const BASE = '/api'
+const BASE = typeof window !== 'undefined' && window.location.hostname === 'localhost'
+  ? 'http://localhost:8000'
+  : '/api'
 
 export const THERAPEUTIC_AREAS = [
   { value: 'cns',            label: 'CNS / Schizophrenia',     ref: 'CATIE (NEJM 2005)' },
@@ -120,11 +122,14 @@ export interface ParsedProtocol {
 }
 
 export async function simulate(req: SimulateRequest): Promise<SimulateResponse> {
+  const ctrl = new AbortController()
+  const timer = setTimeout(() => ctrl.abort(), 300_000) // 5 min — swarm can be large
   const res = await fetch(`${BASE}/simulate`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ ...req, use_preset: req.use_preset ?? true }),
-  })
+    signal: ctrl.signal,
+  }).finally(() => clearTimeout(timer))
   if (!res.ok) {
     const err = await res.text()
     let msg = err

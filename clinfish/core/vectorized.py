@@ -191,6 +191,72 @@ class PopulationArray:
             self.state[:, COL_CUMULATIVE_AE] + delta, 0.0, 1.0
         ).astype(np.float32)
 
+    def update_adherence_states(
+        self,
+        rng: np.random.Generator,
+        p_taking_to_holiday: float = 0.05,
+        p_holiday_to_taking: float = 0.40,
+    ) -> None:
+        """Update 2-state Markov adherence: TAKING(1) ↔ HOLIDAY(0).
+
+        Fellows et al. (2015) daily model adapted to monthly resolution.
+        [DIRECTIONAL structure; transition probabilities ASSUMED at monthly
+        timescale; sweep p_taking_to_holiday in [0.02, 0.15] and
+        p_holiday_to_taking in [0.20, 0.60]]
+
+        p_taking_to_holiday = 0.05: 5% chance per month of starting an
+            adherence holiday. [ASSUMED]
+        p_holiday_to_taking = 0.40: 40% chance per month of returning to
+            taking. [ASSUMED]
+        """
+        enrolled_mask = self.enrolled()
+        n_enrolled = int(enrolled_mask.sum())
+        if n_enrolled == 0:
+            return
+        states = self.state[enrolled_mask, COL_ADHERENCE_STATE]
+        rands = rng.random(n_enrolled)
+        taking = states == 1.0
+        holiday = states == 0.0
+        new_states = states.copy()
+        new_states[taking & (rands[taking] < p_taking_to_holiday)] = 0.0
+        new_states[holiday & (rands[holiday] < p_holiday_to_taking)] = 1.0
+        self.state[enrolled_mask, COL_ADHERENCE_STATE] = new_states
+
+    def update_archetypes(
+        self,
+        rng: np.random.Generator,
+        rounds_since_enrollment: np.ndarray,
+    ) -> None:
+        """Gradual archetype evolution for long-enrolled patients.
+
+        Patients who have been enrolled for >12 months and have
+        COL_INSTITUTIONAL_TRUST > 0.7 have a 2% chance per month of
+        transitioning from TREATMENT_NAIVE_HIGH_ANXIETY to
+        EXPERIENCED_ADVOCATE — the most clinically plausible transition.
+
+        [ASSUMED mechanism — 2%/month transition for veterans with high trust;
+        sweep [0.5%, 5%]; clinical evidence for archetype evolution limited]
+        """
+        # ArchetypeID values (verified from agents.py):
+        #   TREATMENT_NAIVE_HIGH_ANXIETY = 0
+        #   EXPERIENCED_ADVOCATE         = 1
+        TREATMENT_NAIVE = 0
+        EXPERIENCED_ADVOCATE = 1
+
+        enrolled_mask = self.enrolled()
+        # Candidates: treatment-naive, enrolled >12 months, high institutional trust
+        candidates = (
+            enrolled_mask
+            & (self.archetype_ids == TREATMENT_NAIVE)
+            & (rounds_since_enrollment >= 12)
+            & (self.state[:, COL_INSTITUTIONAL_TRUST] > 0.7)
+        )
+        n_candidates = int(candidates.sum())
+        if n_candidates > 0:
+            transition = rng.random(n_candidates) < 0.02
+            transitioning = np.where(candidates)[0][transition]
+            self.archetype_ids[transitioning] = EXPERIENCED_ADVOCATE
+
     def summary(self) -> dict[str, float]:
         enrolled_mask = self.enrolled()
         n_enrolled = int(enrolled_mask.sum())

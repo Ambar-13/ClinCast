@@ -64,6 +64,29 @@ class SimulateRequest(BaseModel):
     protocol_burden:       float = Field(0.50, ge=0.0, le=1.0)
     protocol_visit_burden: float = Field(0.50, ge=0.0, le=1.0)
 
+    # ── Policy-derived modifiers ───────────────────────────────────────────────
+    amendment_initiation_rate_modifier: float = Field(
+        1.0, ge=0.1, le=3.0,
+        description="Multiplier on base amendment probability (1.0 = TA default)")
+    adaptive_design_enabled: bool = Field(
+        False,
+        description="Whether adaptive design elements are active")
+    enrichment_factor: float = Field(
+        0.0, ge=0.0, le=1.0,
+        description="Biomarker enrichment level (0=broad eligibility, 1=fully enriched)")
+    dropout_rate_modifier: float = Field(
+        1.0, ge=0.1, le=2.0,
+        description="Multiplier on per-patient dropout hazard (1.0 = no change)")
+    efficacy_dropout_modifier: float = Field(
+        1.0, ge=0.5, le=2.0,
+        description="Additional dropout multiplier from lack-of-efficacy (placebo-driven)")
+    dsmb_sensitivity: float = Field(
+        0.50, ge=0.1, le=1.0,
+        description="Safety signal threshold for DSMB review trigger (lower = more sensitive)")
+    safety_stopping_threshold: float = Field(
+        0.80, ge=0.1, le=1.0,
+        description="Safety signal threshold for regulatory action (higher = more conservative)")
+
     use_preset: bool = Field(True,  description="Seed from TA calibrated preset")
     seed:       int  = Field(0,     ge=0)
 

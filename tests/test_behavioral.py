@@ -33,14 +33,21 @@ def test_cns_dropout_range():
     """
     result = _run("cns", rounds=18)
     final = result.round_snapshots[-1]
-    # Denominator: patients who ever enrolled (dropout + completed only; not still screening)
-    n_ever_enrolled = final.n_dropout + final.n_completed
+    # Denominator: all patients who ever enrolled (dropout + completed + still enrolled at end).
+    # n_completed is 0 until the final round tick; still-enrolled patients are not yet completers
+    # but have been part of the trial. Including them gives the correct CATIE-denominator:
+    # "enrolled patients" = those who passed screening, whether or not they reached the endpoint.
+    n_ever_enrolled = final.n_dropout + final.n_completed + final.n_enrolled
     if n_ever_enrolled == 0:
         return  # degenerate run — enrollment failed entirely
     dropout_rate = final.n_dropout / n_ever_enrolled
-    # Loose bounds: model is stochastic and not yet fully SMM-calibrated.
-    assert 0.40 <= dropout_rate <= 0.95, (
-        f"CNS dropout {dropout_rate:.2%} of enrolled outside [40%, 95%]"
+    # CATIE reference: 74% ± 15% = [59%, 89%]. Model pre-calibration range: ~50–71%.
+    # Tightened from (40%, 95%) per FIX 6 (M15). Lower bound set to 45% while the
+    # model is still being SMM-calibrated toward the CATIE reference.
+    # TODO: raise lower bound to 59% once full SMM calibration is complete.
+    assert 0.45 <= dropout_rate <= 0.85, (
+        f"CNS dropout {dropout_rate:.2%} of enrolled outside [45%, 85%] "
+        f"(CATIE reference 74% ± ~15%; model currently ~50–71% pre-calibration)"
     )
 
 
@@ -84,8 +91,10 @@ def test_adherence_plausible():
     early_rounds = [r for r in result.round_snapshots if 3 <= r.round_index <= 6 and r.n_enrolled > 0]
     if early_rounds:
         early_adherence = sum(r.mean_adherence for r in early_rounds) / len(early_rounds)
-        assert 0.30 <= early_adherence <= 0.99, (
-            f"Early mean adherence {early_adherence:.3f} implausible (expected 0.30–0.99)"
+        # MEMS reference: 74.9% ± 20%. Tightened from (30%, 99%) per FIX 6 (M15).
+        assert 0.50 <= early_adherence <= 0.95, (
+            f"Early mean adherence {early_adherence:.3f} implausible "
+            f"(expected 0.50–0.95, MEMS reference 74.9% ± 20%)"
         )
 
 
@@ -94,9 +103,11 @@ def test_rare_low_dropout():
     result = _run("rare", n=80, sites=8, rounds=24)
     final = result.round_snapshots[-1]
     dropout_rate = final.n_dropout / result.n_patients
-    # λ=356 months → very low dropout. Upper bound generous for small N variance.
-    assert dropout_rate <= 0.35, (
-        f"Rare disease dropout {dropout_rate:.2%} exceeds 35% (expected ~6–15%)"
+    # λ=356 months → very low dropout. Tufts 2019 reference: 6.5% at 24 months.
+    # Upper bound tightened to 20% per FIX 6 (M15); still generous for small-N stochasticity.
+    assert dropout_rate <= 0.20, (
+        f"Rare disease dropout {dropout_rate:.2%} exceeds 20% "
+        f"(Tufts 2019 reference 6.5% at 24 months)"
     )
 
 

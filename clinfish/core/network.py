@@ -3,12 +3,6 @@
 Patients do not form scale-free networks like corporations. The empirical
 topology of patient communities has three distinct structural layers:
 
-  Family / caregiver units
-    Dense cliques of 2-6 people (patient + primary caregiver + immediate
-    family). High within-clique edge density (~0.8). Strong influence
-    weight: Golin et al. (2006) J Gen Intern Med found family support
-    explained 23% of adherence variance in HIV+ populations.
-
   Disease community / peer support
     Moderately dense subgraphs of 10-50 patients with shared diagnosis.
     Formed through patient forums (PatientsLikeMe, DailyStrength) and
@@ -30,9 +24,18 @@ topology of patient communities has three distinct structural layers:
     observed empirically in online health networks (diameter ≈ 4-6 for
     PatientsLikeMe; data from Wicks et al., 2010).
 
+  Family support
+    Family support modeled as per-patient attribute (not network edges).
+    See PatientArchetype.family_support for covariate. Network edges
+    represent disease community and site peer connections.
+    Golin et al. (2006) J Gen Intern Med: family support explained 23%
+    of adherence variance in HIV+ populations. Molloy et al. (2018)
+    Health Psychology Review meta-analysis (52 studies, n=8,531):
+    family functioning r=0.18 for adherence.
+
 The resulting network is a stochastic block model with hub augmentation.
 This is more realistic than a Barabasi-Albert graph for patient populations
-because the clustering comes from social context (family, diagnosis, site)
+because the clustering comes from social context (diagnosis, site)
 rather than preferential attachment.
 
 DeGroot belief propagation on this topology:
@@ -58,9 +61,9 @@ DeGroot belief propagation on this topology:
   Convergence behavior:
     Health behaviors are complex contagions (Centola 2010, Science 329:1194)
     requiring redundant exposure from clustered ties, not single-contact spread.
-    The clustered SBM topology here (high p_family, moderate p_community) is
-    consistent with complex contagion requirements. Convergence rate governed
-    by second-largest eigenvalue modulus of T (Olshevsky & Tsitsiklis, 2011).
+    The clustered SBM topology here (moderate p_community) is consistent with
+    complex contagion requirements. Convergence rate governed by second-largest
+    eigenvalue modulus of T (Olshevsky & Tsitsiklis, 2011).
     DeGroot global consensus requires strongly connected, aperiodic T.
 
   Empirical note on dynamics:
@@ -72,6 +75,9 @@ DeGroot belief propagation on this topology:
 """
 
 from __future__ import annotations
+
+import warnings
+from typing import Optional
 
 import numpy as np
 import networkx as nx
@@ -90,8 +96,12 @@ def build_patient_network(
     """Build a stochastic block model patient influence network.
 
     Blocks correspond to disease communities (one per site, with cross-site
-    spillover for rare diseases). Family cliques are embedded within blocks.
-    Hub advocates span multiple communities.
+    spillover for rare diseases). Hub advocates span multiple communities.
+
+    Family support is modeled as a per-node attribute (family_support),
+    not as network edges. Family members of trial patients are rarely
+    co-enrolled; the old family-clique edge construction was clinically wrong.
+    The family_support attribute is used as a covariate in response.py.
 
     Args:
         n_patients:    Total patient count.
@@ -101,7 +111,8 @@ def build_patient_network(
                        max(2, int(0.03 * n_patients)) — roughly 3%, consistent
                        with active participation rates in online health forums
                        (Fox & Duggan, Pew Research 2013: ~3% post actively).
-        p_family:      Within-family clique edge probability.
+        p_family:      (unused — kept for API compatibility; family modeled as
+                       attribute not edges)
         p_community:   Within-disease-community edge probability.
         p_site:        Within-site (but cross-community) edge probability.
         seed:          RNG seed.
@@ -118,29 +129,14 @@ def build_patient_network(
     for i in range(n_patients):
         G.nodes[i]["site"] = int(site_ids[i])
 
-    # ── Family cliques ────────────────────────────────────────────────────────
-    # Assign each patient to a family unit (size 2-5, Poisson with mean 3).
-    # Patients in the same family clique have dense edges.
-    family_id = np.full(n_patients, -1, dtype=np.int32)
-    unassigned = list(range(n_patients))
-    rng.shuffle(unassigned)
-    fid = 0
-    i = 0
-    while i < len(unassigned):
-        size = min(int(rng.poisson(3)) + 1, len(unassigned) - i)
-        size = max(size, 1)
-        members = unassigned[i:i + size]
-        for m in members:
-            family_id[m] = fid
-        # Add edges within family clique with probability p_family
-        for a in range(len(members)):
-            for b in range(a + 1, len(members)):
-                if rng.random() < p_family:
-                    G.add_edge(members[a], members[b], weight=1.5, layer="family")
-        fid += 1
-        i += size
-
-    G.graph["family_id"] = family_id
+    # ── Family support attribute ───────────────────────────────────────────────
+    # Family support modeled as per-patient attribute (not network edges).
+    # See PatientArchetype.family_support for covariate. Network edges represent
+    # disease community and site peer connections.
+    # Beta(2, 3): mean ≈ 0.4, representing moderate household support.
+    # Molloy et al. (2018): family functioning r=0.18 for adherence.
+    for i in range(n_patients):
+        G.nodes[i]["family_support"] = float(rng.beta(2, 3))
 
     # ── Disease community edges (within-site) ─────────────────────────────────
     site_groups: dict[int, list[int]] = {}
@@ -175,7 +171,12 @@ def build_patient_network(
     else:
         probs = np.ones(n_patients) / n_patients
 
-    advocate_ids = rng.choice(n_patients, size=n_advocates, replace=False, p=probs)
+    # Cap n_advocates at n_patients to handle degenerate small populations.
+    n_advocates = min(n_advocates, n_patients)
+    if n_advocates > 0:
+        advocate_ids = rng.choice(n_patients, size=n_advocates, replace=False, p=probs)
+    else:
+        advocate_ids = np.array([], dtype=int)
 
     for adv in advocate_ids:
         G.nodes[adv]["advocate"] = True
@@ -187,6 +188,16 @@ def build_patient_network(
             for t in targets:
                 if t != adv and not G.has_edge(adv, t):
                     G.add_edge(adv, t, weight=1.2, layer="advocate")
+
+    # ── Connectivity check ────────────────────────────────────────────────────
+    n_components = nx.number_connected_components(G)
+    if n_components > 1:
+        warnings.warn(
+            f"Patient network has {n_components} connected components. "
+            f"DeGroot dynamics will not propagate beliefs across components. "
+            f"Consider increasing n_patients or community edge probability.",
+            stacklevel=2,
+        )
 
     return G
 
@@ -234,11 +245,44 @@ def propagate_beliefs(
     beliefs: np.ndarray,
     T: np.ndarray,
     enrolled_mask: np.ndarray,
+    initial_beliefs: Optional[np.ndarray] = None,
+    rng: Optional[np.random.Generator] = None,
 ) -> np.ndarray:
-    """Apply one round of DeGroot belief propagation.
+    """Apply one round of Friedkin-Johnsen belief propagation.
 
     Only enrolled patients update their beliefs — screening and dropout
     patients are excluded from the network interaction this round.
+
+    Friedkin-Johnsen (FJ) dynamics anchor each patient to their initial belief,
+    preventing the full consensus that pure DeGroot dynamics would reach in a
+    connected network. This is clinically correct: patients maintain belief
+    diversity throughout trials.
+
+    FJ update:
+        new_belief = T_active @ b_active + lambda_anchor * (b0_active - b_active)
+    where lambda_anchor = 0.05 (5% pull toward initial belief per round).
+    [ASSUMED — no clinical trial anchoring study; prevents full consensus while
+    allowing meaningful belief evolution; sweep [0.01, 0.15]]
+
+    When both initial_beliefs and rng are provided, small Gaussian noise
+    N(0, 0.005) is added after the FJ update, clipped to [0.05, 0.95], to
+    prevent premature consensus. [ASSUMED noise level]
+
+    Weight from dropped-out neighbors is redistributed to self-weight
+    (equivalent to saying dropped-out patients no longer influence beliefs,
+    and that weight returns to the patient's own prior opinion).
+
+    Args:
+        beliefs:         Current belief array, shape (n_patients,).
+        T:               DeGroot weight matrix, shape (n_patients, n_patients).
+        enrolled_mask:   Boolean mask of currently enrolled patients.
+        initial_beliefs: Initial belief array captured at round 0. When None,
+                         falls back to pure DeGroot behavior (no FJ anchoring).
+                         engine.py should pass this each round after storing
+                         the round-0 beliefs.
+        rng:             Random number generator for belief noise. When None,
+                         no noise is added. engine.py should pass the simulation
+                         RNG to enable noise-driven diversity preservation.
 
     Returns updated belief array (same shape as input).
     """
@@ -249,29 +293,48 @@ def propagate_beliefs(
         return new_beliefs
 
     # Sub-matrix of T for active patients only.
-    # Rows must be renormalized: the original T rows sum to 1 over ALL patients,
-    # but here we only include enrolled patients. The weight that would have gone
-    # to unenrolled neighbors is redistributed back to the diagonal (self-weight),
-    # equivalent to those neighbors being unavailable for influence this round.
-    T_active = T[np.ix_(active, active)]
-    row_sums = T_active.sum(axis=1, keepdims=True)
-    row_sums = np.where(row_sums > 0, row_sums, 1.0)
-    T_active = T_active / row_sums
-    b_active = beliefs[active]
-    new_beliefs[active] = T_active @ b_active
+    # Weight from dropped-out neighbors is redistributed to self-weight
+    # (equivalent to saying dropped-out patients no longer influence beliefs,
+    # and that weight returns to the patient's own prior opinion).
+    T_active = T[np.ix_(active, active)].copy()
+    row_sums = T_active.sum(axis=1)
+    missing_weight = 1.0 - row_sums  # weight from dropped-out neighbors
+    np.fill_diagonal(T_active, T_active.diagonal() + missing_weight)
+    # No row normalization needed — rows now sum to 1 by construction
 
-    return np.clip(new_beliefs, 0.0, 1.0).astype(np.float32)
+    b_active = beliefs[active]
+    degroot_update = T_active @ b_active
+
+    if initial_beliefs is not None:
+        # Friedkin-Johnsen anchoring: 5% pull toward initial belief per round.
+        # Prevents full consensus while allowing meaningful belief evolution.
+        # [ASSUMED lambda_anchor=0.05; sweep [0.01, 0.15]]
+        lambda_anchor = 0.05
+        b0_active = initial_beliefs[active]
+        fj_update = degroot_update + lambda_anchor * (b0_active - b_active)
+    else:
+        fj_update = degroot_update
+
+    if rng is not None:
+        # Add small noise to prevent premature consensus. [ASSUMED noise level 0.005]
+        noise = rng.normal(0, 0.005, size=len(active)).astype(np.float32)
+        fj_update = fj_update + noise
+
+    new_beliefs[active] = np.clip(fj_update, 0.05, 0.95).astype(np.float32)
+
+    return new_beliefs.astype(np.float32)
 
 
 def network_statistics(G: nx.Graph) -> dict[str, float]:
     """Quick structural summary for reporting."""
     degrees = [d for _, d in G.degree()]
+    n_components = nx.number_connected_components(G)
     return {
         "n_nodes": G.number_of_nodes(),
         "n_edges": G.number_of_edges(),
         "mean_degree": float(np.mean(degrees)) if degrees else 0.0,
         "max_degree": float(max(degrees)) if degrees else 0.0,
-        "n_components": nx.number_connected_components(G),
+        "n_components": n_components,
         "n_advocates": sum(
             1 for _, data in G.nodes(data=True) if data.get("advocate", False)
         ),

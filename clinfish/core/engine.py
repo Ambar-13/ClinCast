@@ -62,6 +62,13 @@ from clinfish.domain.response import (
     ae_reporting_fraction,
     accumulate_ae_load,
     AE_GRADE_WEIGHT,
+    assign_dropout_cause,
+    CAUSE_EFFICACY,
+    CAUSE_INTOLERABILITY,
+    CAUSE_PERSONAL,
+    CAUSE_ADMINISTRATIVE,
+    CAUSE_NON_MEDICAL,
+    CAUSE_NAMES,
 )
 from clinfish.domain.stocks import TrialStocks, SiteActivationPipeline
 from clinfish.reports.evidence_pack import (
@@ -112,11 +119,38 @@ class SimConfig:
     # Reduces dropout hazard for LOW_ACCESS_RURAL archetype by ~15% [ASSUMED magnitude]
     patient_support_program: bool = False
 
+    # Policy-derived modifiers (set via apply_policy() in ingest/policy.py)
+    # amendment_initiation_rate_modifier: scales base amendment probability
+    # [DIRECTIONAL — higher appetite → more amendments → higher site burden]
+    amendment_initiation_rate_modifier: float = 1.0
+
+    # dropout_rate_modifier: multiplies final per-patient dropout hazard
+    # [DIRECTIONAL — enrichment reduces dropout; magnitude ASSUMED]
+    dropout_rate_modifier: float = 1.0
+
+    # efficacy_dropout_modifier: additional hazard multiplier for placebo-driven dropout
+    # [DIRECTIONAL — placebo patients more likely to dropout; 40% max ASSUMED]
+    efficacy_dropout_modifier: float = 1.0
+
+    # dsmb_sensitivity: threshold for DSMB review trigger (replaces hardcoded 0.50)
+    # [DIRECTIONAL — intensive DSMB → lower threshold; ASSUMED]
+    dsmb_sensitivity: float = 0.50
+
+    # safety_stopping_threshold: threshold for regulatory action (replaces hardcoded 0.80)
+    # [DIRECTIONAL — conservative sponsors set higher bars; ASSUMED linear mapping]
+    safety_stopping_threshold: float = 0.80
+
     # LLM swarm mode — None = offline (vectorized only)
     llm_client:    Any | None = None
     n_swarm_agents: int       = 1000
 
     pop_config: PatientPopulationConfig | None = None  # if None, built from n/n_sites
+
+    # FIX 7 (H7): trial_duration_months — minimum on-study time for a patient to count
+    # as a completer. Defaults to full simulation duration. Late enrollees who cannot
+    # complete the minimum protocol duration are censored rather than counted as completers.
+    # This prevents bulk-completion of patients who enrolled in the final rounds.
+    trial_duration_months: float | None = None
 
     def __post_init__(self) -> None:
         if self.pop_config is None:
@@ -124,6 +158,8 @@ class SimConfig:
                 n_patients=self.n_patients,
                 n_sites=self.n_sites,
             )
+        if self.trial_duration_months is None:
+            self.trial_duration_months = self.n_rounds * self.months_per_round
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -150,6 +186,12 @@ class SimulationRound:
     site_burden: float
     n_injection_seeded: int = 0
     active_sites: float = 0.0  # from site activation pipeline
+    # FIX 2 (C3): True when a clinical hold halted enrollment this round.
+    enrollment_halted: bool = False
+    # FIX 7 (H7): patients who enrolled too late to complete protocol duration are censored.
+    n_censored: int = 0
+    # FIX 2 (C1): Competing risks dropout cause counts for this round.
+    dropout_cause_counts: dict = dataclasses.field(default_factory=dict)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -164,6 +206,9 @@ def run_simulation(config: SimConfig) -> TrialOutputs:
     """
     t0 = time.perf_counter()
     rng = np.random.default_rng(config.seed)
+    # Separate RNG for competing-risk cause assignment so it does not consume
+    # draws from the main simulation RNG and alter dropout/hazard outcomes.
+    rng_causes = np.random.default_rng(config.seed + 0xCA05E5)
 
     # ── Initialise population ─────────────────────────────────────────────────
     pop = PopulationArray.generate(config.pop_config, seed=config.seed)
@@ -239,13 +284,55 @@ def run_simulation(config: SimConfig) -> TrialOutputs:
         t_months = r * config.months_per_round
         n_seeded_this_round = 0
 
+        # Draw amendment event FIRST each round (before enrollment RNG draws) so that
+        # runs differing only in protocol_burden/visit_burden consume RNG in the same
+        # order up to this point, preserving the causal test: higher burden -> more site burden.
+        # [Internal RNG ordering fix — does not change model causal structure]
+        n_amendments_this_round = _sponsor_amendment_draw(
+            stocks, rng,
+            amendment_initiation_rate_modifier=config.amendment_initiation_rate_modifier,
+        )
+
         # Advance site activation pipeline (DELAY3 — NCI 167-day median)
         stocks.site_activation.step()
+        # FIX 11 (M13): assert pipeline conservation each round.
+        assert stocks.site_activation.conservation_check(), (
+            f"site activation pipeline conservation violated at round {r}"
+        )
+
+        # FIX 8 (H10): site experience ramps toward 1.0 with τ=6mo first-order smooth.
+        # Multiplies enrollment rate by (0.7 + 0.3 * site_experience) — sites start at
+        # 70% efficiency and ramp to 100%, producing a concave early-enrollment phase (S-curve).
+        # [DIRECTIONAL — site learning curves documented in Tufts CSDD; 6mo τ and 70% start efficiency ASSUMED]
+        tau_experience = 6.0  # months
+        stocks.site_experience += (config.months_per_round / tau_experience) * (1.0 - stocks.site_experience)
+        site_learning_factor = 0.7 + 0.3 * stocks.site_experience
 
         # 1. Enrollment: Poisson draw for new patients from screening pool
+        # FIX 1 (C2): n_new defined at enclosing scope with default 0; set inside block if enrollment occurs.
+        n_new = 0
+        enrollment_halted_this_round = False
         screening_mask = pop.screening()
         n_screening = int(screening_mask.sum())
-        if n_screening > 0:
+
+        # FIX 2 (C3): Check safety signal triggers BEFORE enrollment; halt/reduce if needed.
+        # Clinical hold → skip enrollment entirely.
+        # Regulatory action → reduce enrollment rate by 50%.
+        # DSMB review → reduce enrollment rate by 20%.
+        enrollment_rate_modifier = config.enrollment_rate_modifier
+        if stocks.safety_signal.triggers_clinical_hold:
+            enrollment_halted_this_round = True
+        elif stocks.safety_signal.level >= config.safety_stopping_threshold:
+            enrollment_rate_modifier *= 0.50  # 50% reduction for regulatory action
+        elif stocks.safety_signal.level >= config.dsmb_sensitivity:
+            enrollment_rate_modifier *= 0.80  # 20% reduction for DSMB review
+
+        # FIX 5 (H5): apply recruitment boost from previous round if shortfall was > 30%.
+        # [DIRECTIONAL — sponsors do respond to shortfall; 15% magnitude ASSUMED]
+        enrollment_rate_modifier *= (1.0 + stocks.recruitment_boost)
+        stocks.recruitment_boost = 0.0  # consumed; reset for next round
+
+        if n_screening > 0 and not enrollment_halted_this_round:
             # Negative Binomial enrollment model (Anisimov & Fedorov, Stat Med 2007,
             # PMID 17639505): Poisson-Gamma marginal captures inter-site overdispersion.
             # Empirical overdispersion ratio var/mean ≈ 6 (PMID 12873651).
@@ -254,7 +341,8 @@ def run_simulation(config: SimConfig) -> TrialOutputs:
             # Active sites modulates enrollment: early rounds have few active sites
             # NCI 167-day median activation → active_fraction ramps from ~0 to ~1 over months 1-8
             active_fraction = stocks.site_activation.active_fraction
-            site_rate = max(0.5, 0.8 * config.n_sites * active_fraction * config.enrollment_rate_modifier * (1.0 - stocks.site_burden.level))
+            # FIX 8 (H10): multiply by site_learning_factor for S-curve ramp.
+            site_rate = max(0.5, 0.8 * config.n_sites * active_fraction * enrollment_rate_modifier * (1.0 - stocks.site_burden.level) * site_learning_factor)
             # NB via Gamma-Poisson. r = mean/5 gives overdispersion ratio 6 (Anisimov 2007).
             # Floor r at 1.0 to prevent extreme zero-enrollment rounds; still overdispersed
             # (ratio ≈ 3 at floor), captures inter-site variance without pathological sparsity.
@@ -271,7 +359,12 @@ def run_simulation(config: SimConfig) -> TrialOutputs:
                 enrollment_round[enroll_idx] = float(r)  # record enrollment round
                 stocks.pipeline.n_screening -= n_new
                 stocks.pipeline.n_enrolled  += n_new
-                stocks.enrollment_velocity.update(float(n_new))
+                stocks.enrollment_velocity.update(float(n_new), dt=config.months_per_round)
+
+        # FIX 5 (H5): after updating enrollment velocity, check shortfall and arm boost.
+        # If perceived rate is >30% above actual rate, sponsor responds with +15% boost next round.
+        if stocks.enrollment_velocity.enrollment_shortfall > 0.3:
+            stocks.recruitment_boost = 0.15  # +15% for next round [DIRECTIONAL — 15% ASSUMED]
 
         enrolled_mask = pop.enrolled()
         n_enrolled = int(enrolled_mask.sum())
@@ -320,8 +413,10 @@ def run_simulation(config: SimConfig) -> TrialOutputs:
         gap = trust_goal_arr - institutional_trust
         # Asymmetric τ: decay (gap<0) uses τ=3, recovery (gap>0) uses τ=12
         tau_arr = np.where(gap < 0, 3.0, 12.0).astype(np.float32)
+        # FIX 9 (H11): multiply by dt so SMOOTH scales correctly with step size.
+        dt = config.months_per_round
         pop.state[enrolled_idx, COL_INSTITUTIONAL_TRUST] = np.clip(
-            institutional_trust + gap / tau_arr, 0.0, 1.0,
+            institutional_trust + (dt / tau_arr) * gap, 0.0, 1.0,
         ).astype(np.float32)
 
         # 4. Compute adherence, visit compliance, AE reporting
@@ -344,6 +439,9 @@ def run_simulation(config: SimConfig) -> TrialOutputs:
             site_access_score=pop.site_access_score[enrolled_idx],
             belief=pop.beliefs()[enrolled_idx],
             protocol_visit_burden=config.protocol_visit_burden,
+            # FIX 6 (H6): pass site burden level so response.py can wire the
+            # effect of overwhelmed sites on visit compliance.
+            site_burden_level=stocks.site_burden.level,
         )
         pop.state[enrolled_idx, COL_VISIT_BURDEN] = 1.0 - vis  # burden = non-compliance
 
@@ -376,15 +474,16 @@ def run_simulation(config: SimConfig) -> TrialOutputs:
 
         # 5b. Trial fatigue accumulation (enrolled patients only)
         # Inflow: visit frequency + AE occurrence each round.
-        # Outflow: first-order recovery (τ=6mo). [DIRECTIONAL — Montori Cumulative Complexity
-        # Model (PMID 27417747); τ and coefficients ASSUMED; sweep τ ∈ [3, 12]]
+        # Outflow: first-order decay with tau=6mo (Euler: outflow = fatigue/tau per month;
+        # FIX 10 (M12): half-life ~= 4.2 months, NOT 6 months (half-life = tau*ln2 = 4.16mo).
+        # [DIRECTIONAL — Montori Cumulative Complexity Model (PMID 27417747); tau and coefficients ASSUMED; sweep tau in [3, 12]]
         fatigue = pop.state[enrolled_idx, COL_TRIAL_FATIGUE]
         # Visit inflow: normalized visits per month → fraction of max monthly burden (8 vpm)
         visit_inflow = 0.04 * (config.visits_per_month / 8.0)  # [ASSUMED]
         # AE inflow: fraction of patients experiencing an AE this round
         ae_frac = float(ae_occurs.mean()) if len(ae_occurs) > 0 else 0.0
         ae_inflow = 0.06 * ae_frac  # [ASSUMED magnitude]
-        # Recovery outflow: first-order, τ=6mo
+        # Recovery outflow: first-order decay with tau=6mo (Euler: outflow = fatigue/tau per month; half-life ~= 4.2 months)
         recovery_outflow = fatigue / 6.0
         pop.state[enrolled_idx, COL_TRIAL_FATIGUE] = np.clip(
             fatigue + visit_inflow + ae_inflow - recovery_outflow, 0.0, 1.0,
@@ -406,9 +505,31 @@ def run_simulation(config: SimConfig) -> TrialOutputs:
             time_months=per_patient_time,
             shape_k=config.shape_k,  # None = use TA default from TA_DROPOUT_LAMBDA
         )
+
+        # FIX 3 (C5): patient_support_program reduces dropout hazard for
+        # LOW_ACCESS_RURAL patients by 25% (hazard × 0.75).
+        # [DIRECTIONAL — Milken Institute 2022; magnitude ASSUMED]
+        if config.patient_support_program:
+            # LOW_ACCESS_RURAL has ArchetypeID value 3
+            LOW_ACCESS_RURAL_INDEX = int(ArchetypeID.LOW_ACCESS_RURAL)
+            rural_mask = pop.archetype_ids[enrolled_idx] == LOW_ACCESS_RURAL_INDEX
+            if rural_mask.any():
+                hazard = hazard.copy()
+                hazard[rural_mask] *= 0.75
+
+        # Apply policy-derived dropout modifiers before Bernoulli draw.
+        # dropout_rate_modifier: global hazard scale (e.g., enrichment reduces dropout).
+        # efficacy_dropout_modifier: additional scale from placebo-driven dropout.
+        # Both are applied multiplicatively; clipped to [0, 1] to keep valid probability.
+        # [DIRECTIONAL — enrichment/placebo effects on dropout; magnitudes ASSUMED]
+        combined_dropout_modifier = config.dropout_rate_modifier * config.efficacy_dropout_modifier
+        if combined_dropout_modifier != 1.0:
+            hazard = np.clip(hazard * combined_dropout_modifier, 0.0, 1.0)
+
         pop.state[enrolled_idx, COL_DROPOUT_HAZARD] = hazard
 
         dropout_draws = rng.random(n_enrolled) < hazard
+        dropout_idx_local = dropout_draws  # alias used for competing risks below
         if dropout_draws.any():
             dropout_global = np.zeros(config.n_patients, dtype=bool)
             dropout_global[enrolled_idx[dropout_draws]] = True
@@ -416,37 +537,88 @@ def run_simulation(config: SimConfig) -> TrialOutputs:
             n_dropout_this = int(dropout_draws.sum())
             stocks.pipeline.n_enrolled -= n_dropout_this
             stocks.pipeline.n_dropout  += n_dropout_this
+
+            # Assign dropout cause using competing risks model.
+            # Uses rng_causes (separate from main rng) so cause assignment
+            # does not perturb the main simulation RNG sequence.
+            if dropout_idx_local.sum() > 0:
+                dropped_archetype_ids = pop.archetype_ids[dropout_global]
+                dropout_causes = assign_dropout_cause(
+                    dropped_archetype_ids, config.therapeutic_area, rng_causes
+                )
+                round_dropout_causes = dropout_causes.tolist()
+            else:
+                round_dropout_causes = []
         else:
             n_dropout_this = 0
+            round_dropout_causes = []
+
+        # Tally cause counts for this round's record
+        _cause_label_map = {
+            CAUSE_EFFICACY: "efficacy",
+            CAUSE_INTOLERABILITY: "intolerability",
+            CAUSE_PERSONAL: "personal",
+            CAUSE_ADMINISTRATIVE: "administrative",
+            CAUSE_NON_MEDICAL: "non_medical",
+        }
+        round_cause_counts: dict = {}
+        for cause_int in round_dropout_causes:
+            label = _cause_label_map.get(cause_int, str(cause_int))
+            round_cause_counts[label] = round_cause_counts.get(label, 0) + 1
 
         # 7. Completion
+        # FIX 7 (H7): a patient completes only if they have been enrolled long enough
+        # to complete the protocol duration. Late enrollees who cannot complete the
+        # minimum on-study time are censored rather than bulk-moved to completed.
+        # This prevents inflation of n_completed with patients enrolled in final rounds.
+        n_censored_this_round = 0
         if r == config.n_rounds - 1:
-            # Last round: complete all remaining enrolled
-            remaining = pop.enrolled()
-            n_complete = int(remaining.sum())
-            if n_complete > 0:
-                pop.complete(remaining)
-                stocks.pipeline.n_enrolled  -= n_complete
-                stocks.pipeline.n_completed += n_complete
+            remaining_mask = pop.enrolled()
+            remaining_idx = np.where(remaining_mask)[0]
+            if len(remaining_idx) > 0:
+                months_on_study = np.where(
+                    enrollment_round[remaining_idx] >= 0,
+                    (r - enrollment_round[remaining_idx] + 1) * config.months_per_round,
+                    0.0,
+                )
+                can_complete = months_on_study >= config.trial_duration_months
+                completers_local = remaining_idx[can_complete]
+                censored_local = remaining_idx[~can_complete]
+                if len(completers_local) > 0:
+                    complete_mask = np.zeros(config.n_patients, dtype=bool)
+                    complete_mask[completers_local] = True
+                    pop.complete(complete_mask)
+                    stocks.pipeline.n_enrolled  -= len(completers_local)
+                    stocks.pipeline.n_completed += len(completers_local)
+                # Censored patients remain enrolled; excluded from n_completed.
+                n_censored_this_round = len(censored_local)
 
         # 8. Stock updates
         deviation_rate = float((1.0 - vis).mean())
         underreporting = float(1.0 - ae_reporting.mean())
-        ae_burden_increment = float(pop.state[enrolled_idx, COL_CUMULATIVE_AE].mean()) * 0.05
+        # FIX 4 (C6): scaling multiplier increased from 0.05 to 0.15 so that
+        # typical mean AE load (~0.2) produces ae_burden_increment ~0.03/round,
+        # allowing signals to accumulate toward DSMB/regulatory thresholds.
+        # [ASSUMED scaling -- sweep multiplier in [0.05, 0.25]; decay_rate in [0.005, 0.03]]
+        ae_burden_increment = float(pop.state[enrolled_idx, COL_CUMULATIVE_AE].mean()) * 0.15
 
         stocks.data_quality.update(
             deviation_rate=deviation_rate,
             underreporting_fraction=underreporting,
             monitoring_active=config.monitoring_active,
         )
-        stocks.safety_signal.update(ae_burden_increment)
+        # FIX 9 (H11): pass dt to safety_signal.update() for correct Euler scaling.
+        stocks.safety_signal.update(ae_burden_increment, dt=config.months_per_round)
         # Query volume: per-patient deviation rate generates ~1 query per 5
         # deviations; scaled by enrolled count not total. Industry benchmark:
-        # 3–5 day target resolution; 23-day observed median (SCDM Metrics).
+        # 3-5 day target resolution; 23-day observed median (SCDM Metrics).
         site_query_volume = deviation_rate * max(1.0, n_enrolled / 50.0)
+        # FIX 9 (H11): pass dt to site_burden.update() for correct Euler scaling.
+        # n_amendments_this_round was drawn at top of round loop (before enrollment RNG).
         stocks.site_burden.update(
-            n_amendments_this_round=_sponsor_amendment_draw(stocks, rng),
+            n_amendments_this_round=n_amendments_this_round,
             query_volume=site_query_volume,
+            dt=config.months_per_round,
         )
         assert stocks.pipeline.conservation_check(), "population conservation violated"
 
@@ -466,13 +638,20 @@ def run_simulation(config: SimConfig) -> TrialOutputs:
                          if current_enrolled.any() else 0.0,
             visit_compliance_rate=float(vis.mean()),
             ae_reporting_mean=float(ae_reporting.mean()),
-            enrollment_this_round=int(n_enrolled > 0) * min(1, rng.poisson(1)),
+            # FIX 1 (C2): store actual patients enrolled this round (n_new), not a
+            # random Bernoulli draw. n_new is defined at enclosing scope (default 0).
+            enrollment_this_round=n_new,
             dropout_this_round=n_dropout_this,
             safety_signal=stocks.safety_signal.level,
             data_quality=stocks.data_quality.level,
             site_burden=stocks.site_burden.level,
             n_injection_seeded=n_seeded_this_round,
             active_sites=stocks.site_activation.active,
+            # FIX 2 (C3): record whether enrollment was halted this round due to clinical hold.
+            enrollment_halted=enrollment_halted_this_round,
+            # FIX 7 (H7): record patients censored due to insufficient on-study time.
+            n_censored=n_censored_this_round,
+            dropout_cause_counts=round_cause_counts,
         ))
 
     elapsed = time.perf_counter() - t0
@@ -539,7 +718,7 @@ def run_simulation(config: SimConfig) -> TrialOutputs:
             units="index 0-1",
         ),
         regulator_action_probability=TaggedValue(
-            value=float(stocks.safety_signal.triggers_regulatory_action),
+            value=float(stocks.safety_signal.level >= config.safety_stopping_threshold),
             tag=Tag.DIRECTIONAL,
             source="FDA clinical hold rate ~9% of INDs; Manning et al.",
             units="boolean",
@@ -570,12 +749,16 @@ def run_simulation(config: SimConfig) -> TrialOutputs:
 # INTERNAL HELPERS
 # ─────────────────────────────────────────────────────────────────────────────
 
-def _sponsor_amendment_draw(stocks: TrialStocks, rng: np.random.Generator) -> int:
+def _sponsor_amendment_draw(
+    stocks: TrialStocks,
+    rng: np.random.Generator,
+    amendment_initiation_rate_modifier: float = 1.0,
+) -> int:
     """Bernoulli draw for whether a protocol amendment occurs this round."""
     base_rate = INSTITUTIONAL_ACTORS[InstitutionType.PHARMA_SPONSOR].amendment_initiation_rate
     # Enrollment pressure increases amendment probability (protocol loosening)
     enrollment_pressure = max(0.0, 1.0 - stocks.pipeline.n_enrolled / max(stocks.pipeline.n_total, 1))
-    adjusted_rate = min(0.5, base_rate * (1.0 + enrollment_pressure))
+    adjusted_rate = min(0.5, base_rate * amendment_initiation_rate_modifier * (1.0 + enrollment_pressure))
     return int(rng.random() < adjusted_rate)
 
 

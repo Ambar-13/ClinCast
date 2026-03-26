@@ -187,8 +187,12 @@ from clinfish.ingest.protocol import TherapeuticArea
 class _TADropoutLambda(NamedTuple):
     lambda_months: float   # Weibull scale parameter (months)
     source: str
-    tag: str
+    tag: str               # epistemic tag for λ
     shape_k: float = 1.0   # Weibull shape κ; 1.0 = exponential (constant hazard)
+    # κ epistemic status is tracked via inline comments per entry (see below).
+    # For cardiovascular (AVID/MADIT/SCD-HeFT event-time fits): κ is GROUNDED.
+    # For all other TAs: κ is DIRECTIONAL — fitted to OS/EFS outcomes, not dropout;
+    #   transferred across endpoints with acknowledged uncertainty.
 
 
 # λ values re-derived for each κ via: F(t_ref) = target → λ = t_ref / (-ln(1-target))^(1/κ)
@@ -200,6 +204,7 @@ TA_DROPOUT_LAMBDA: dict[str, _TADropoutLambda] = {
     # implying early dropout spike consistent with κ < 1. [DIRECTIONAL — shape inferred
     # from temporal distribution; primary Weibull κ anchor from NBK262471 CV trials].
     # λ recalibrated: (18/λ)^0.8 = -ln(0.26) = 1.3471 → λ = 18/1.3471^1.25 = 12.4
+    # κ: DIRECTIONAL (fitted to OS/EFS outcomes, not dropout; transferred across endpoints)
     "cns": _TADropoutLambda(
         lambda_months=12.4,
         source="Lieberman JA et al., NEJM 2005 (CATIE, n=1493, 18mo); κ DIRECTIONAL",
@@ -211,6 +216,7 @@ TA_DROPOUT_LAMBDA: dict[str, _TADropoutLambda] = {
     # κ=0.75: anchored to AVID OS regression κ=0.70 (NBK262471); CV dropout
     # also front-loaded (early high-AE patients exit first). [DIRECTIONAL]
     # λ recalibrated: (24/λ)^0.75 = -ln(0.79) = 0.2357 → λ = 24/0.2357^1.333 = 165
+    # κ: GROUNDED — anchored to AVID/MADIT/SCD-HeFT event-time Weibull fits (NBK262471)
     "cardiovascular": _TADropoutLambda(
         lambda_months=165.0,
         source="CHARM Overall Programme, n=7599; κ anchored to AVID OS (NBK262471)",
@@ -222,6 +228,7 @@ TA_DROPOUT_LAMBDA: dict[str, _TADropoutLambda] = {
     # κ=1.3: long trials, ARIA MRI compliance fatigue. Anchored to oncology
     # EFS κ=1.37 (PMC7052506); AD trials share progressive compliance decline.
     # [DIRECTIONAL]. λ recalibrated: (17/λ)^1.3 = 0.2380 → λ = 17/0.2380^0.769 = 51
+    # κ: DIRECTIONAL (fitted to OS/EFS outcomes, not dropout; transferred across endpoints)
     "alzheimers": _TADropoutLambda(
         lambda_months=51.0,
         source="Phase 3 AD meta-analysis, n=8103; κ anchored to EFS κ=1.37 (PMC7052506)",
@@ -233,6 +240,7 @@ TA_DROPOUT_LAMBDA: dict[str, _TADropoutLambda] = {
     # κ=1.2: anchored to pediatric oncology EFS κ=1.37 (PMC7052506); general
     # oncology slightly lower due to AE-driven early exits offsetting fatigue.
     # [DIRECTIONAL]. λ recalibrated: (18/λ)^1.2 = 0.2143 → λ = 18/0.2143^0.833 = 65
+    # κ: DIRECTIONAL (fitted to OS/EFS outcomes, not dropout; transferred across endpoints)
     "oncology": _TADropoutLambda(
         lambda_months=65.0,
         source="Tufts CSDD 2019 (late-phase); κ anchored to PMC7052506 κ=1.37",
@@ -298,6 +306,16 @@ _AE_REPORTING_BASE = np.array(
     dtype=np.float64,
 )
 
+# Per-archetype AE sensitivity values indexed by ArchetypeID integer value.
+# Used in dropout_hazard() in place of the hardcoded scalar ae_alpha=3.0.
+# Values from PatientArchetype.ae_sensitivity (0=insensitive, 1=doubles hazard per unit load).
+# These are scaled to the [1.5, 5.0] logistic-alpha range via ae_alpha = 1.5 + 3.5*ae_sensitivity.
+# [ASSUMED — no empirical anchor mapping ae_sensitivity to logistic α; sweep ae_sensitivity ±0.2]
+_AE_SENSITIVITY_LOOKUP = np.array(
+    [ARCHETYPES[ArchetypeID(i)].ae_sensitivity for i in range(len(ArchetypeID))],
+    dtype=np.float64,
+)
+
 _CONSCIENTIOUSNESS_BASE = np.array([ARCHETYPES[ArchetypeID(i)].conscientiousness for i in range(len(ArchetypeID))], dtype=np.float64)
 _NEUROTICISM_BASE       = np.array([ARCHETYPES[ArchetypeID(i)].neuroticism        for i in range(len(ArchetypeID))], dtype=np.float64)
 
@@ -306,12 +324,25 @@ _NEUROTICISM_BASE       = np.array([ARCHETYPES[ArchetypeID(i)].neuroticism      
 # COMPETING RISKS PROPORTIONS
 # ─────────────────────────────────────────────────────────────────────────────
 
-# Cause indices
-CAUSE_LACK_OF_EFFICACY  = 0
-CAUSE_INTOLERABILITY    = 1   # AE-driven
-CAUSE_PATIENT_DECISION  = 2   # voluntary withdrawal
-CAUSE_ADMINISTRATIVE    = 3   # sponsor/site-initiated
-CAUSE_NON_MEDICAL       = 4   # logistics, access, life events
+# Cause indices (named constants for external callers)
+CAUSE_EFFICACY       = 0   # lack of efficacy / futility
+CAUSE_INTOLERABILITY = 1   # AE-driven
+CAUSE_PERSONAL       = 2   # voluntary patient/caregiver decision
+CAUSE_ADMINISTRATIVE = 3   # sponsor/site-initiated
+CAUSE_NON_MEDICAL    = 4   # logistics, access, life events
+
+# Legacy aliases (kept for backward compatibility)
+CAUSE_LACK_OF_EFFICACY = CAUSE_EFFICACY
+CAUSE_PATIENT_DECISION = CAUSE_PERSONAL
+
+# Human-readable names for cause indices (used in reporting)
+CAUSE_NAMES = [
+    "lack_of_efficacy",    # 0
+    "intolerability",      # 1
+    "personal_decision",   # 2
+    "administrative",      # 3
+    "non_medical",         # 4
+]
 
 # CNS base proportions from CATIE (Lieberman et al., NEJM 2005)
 # Supplemented with ATLAS for cardiovascular, CHARM for heart failure.
@@ -326,12 +357,20 @@ _CARDIO_CAUSE_PROPORTIONS = np.array([0.15, 0.25, 0.09, 0.03, 0.48], dtype=np.fl
 # higher AE discontinuation in immuno-oncology. EORTC: 96% report G3/4 AEs.
 _ONCOLOGY_CAUSE_PROPORTIONS = np.array([0.35, 0.30, 0.15, 0.05, 0.15], dtype=np.float32)
 
+# Alzheimer's disease: cause proportions reflecting AD trial dropout structure.
+# Efficacy/futility (15%), intolerability/AE (20%), patient/caregiver decision (35%),
+# administrative (15%), non-medical (15%).
+# [ASSUMED — no AD-specific competing risks meta-analysis; calibrated from ADCS/A4
+#  qualitative reports. CATIE proportions (schizophrenia) are not appropriate here:
+#  AD trials have higher caregiver-mediated withdrawal and lower pure efficacy dropout.]
+_AD_CAUSE_PROPORTIONS = np.array([0.15, 0.20, 0.35, 0.15, 0.15], dtype=np.float32)
+
 # Generic [ASSUMED] — equal weight as conservative prior for calibration.
 _DEFAULT_CAUSE_PROPORTIONS = np.array([0.20, 0.20, 0.25, 0.05, 0.30], dtype=np.float32)
 
 _TA_CAUSE_PROPORTIONS: dict[str, np.ndarray] = {
     "cns":          _CNS_CAUSE_PROPORTIONS,
-    "alzheimers":   _CNS_CAUSE_PROPORTIONS,
+    "alzheimers":   _AD_CAUSE_PROPORTIONS,      # FIX M3: was _CNS_CAUSE_PROPORTIONS (CATIE/schizophrenia)
     "cardiovascular": _CARDIO_CAUSE_PROPORTIONS,
     "oncology":     _ONCOLOGY_CAUSE_PROPORTIONS,
 }
@@ -339,6 +378,48 @@ _TA_CAUSE_PROPORTIONS: dict[str, np.ndarray] = {
 
 def get_cause_proportions(therapeutic_area: str) -> np.ndarray:
     return _TA_CAUSE_PROPORTIONS.get(therapeutic_area, _DEFAULT_CAUSE_PROPORTIONS)
+
+
+def assign_dropout_cause(
+    archetype_ids: np.ndarray,
+    therapeutic_area: str,
+    rng: np.random.Generator,
+) -> np.ndarray:
+    """Assign a competing-risk cause code to each patient who dropped out this round.
+
+    Follows Beyersmann et al. (Statistics in Medicine, 2009, DOI 10.1002/sim.3516):
+    simulate event time from total hazard, then assign cause by multinomial draw
+    proportional to cause-specific hazards (implemented here as TA-level proportions).
+
+    Parameters
+    ----------
+    archetype_ids : np.ndarray of int
+        Array of archetype IDs for the patients who dropped out this round.
+    therapeutic_area : str
+        Therapeutic area key (e.g. "cns", "alzheimers", "cardiovascular").
+    rng : np.random.Generator
+        Seeded numpy RNG for reproducibility.
+
+    Returns
+    -------
+    np.ndarray of int, shape (n_dropouts,)
+        Integer cause codes per patient:
+          0 = CAUSE_EFFICACY       (lack of efficacy / futility)
+          1 = CAUSE_INTOLERABILITY (AE-driven)
+          2 = CAUSE_PERSONAL       (patient / caregiver decision)
+          3 = CAUSE_ADMINISTRATIVE (sponsor / site initiated)
+          4 = CAUSE_NON_MEDICAL    (logistics, access, life events)
+    """
+    n = len(archetype_ids)
+    if n == 0:
+        return np.empty(0, dtype=np.int8)
+
+    proportions = get_cause_proportions(therapeutic_area).astype(np.float64)
+    # Normalise to ensure exact sum-to-1 after dtype conversion
+    proportions = proportions / proportions.sum()
+
+    causes = rng.choice(len(proportions), size=n, replace=True, p=proportions)
+    return causes.astype(np.int8)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -352,6 +433,7 @@ def dropout_hazard(
     belief: np.ndarray,
     time_months: float | np.ndarray,
     shape_k: float | None = None,
+    ae_sensitivity_array: np.ndarray | None = None,
 ) -> np.ndarray:
     """Per-patient conditional dropout probability for this month.
 
@@ -368,10 +450,31 @@ def dropout_hazard(
 
     For κ=1 reduces to 1 - exp(-1/λ) (constant hazard, same as exponential).
 
-    Additional modifiers applied multiplicatively:
-      1. Archetype hazard multiplier.
-      2. AE load amplification (logistic; α=3.0 [ASSUMED]).
-      3. Belief deflation: low trust accelerates dropout [DIRECTIONAL].
+    Archetype effects are applied via λ-scaling (FIX H1):
+      Multiplying the archetype dropout_hazard_multiplier INTO the raw hazard would
+      break the calibrated (λ, κ) pair — the population-average hazard would no longer
+      match the empirical target. Instead, we shift λ per archetype while keeping κ fixed:
+        lambda_effective = lambda_months / multiplier
+      Dividing λ by a multiplier >1 compresses the timescale, making the Weibull decay
+      faster (higher hazard), which is exactly what the multiplier intended. At the
+      population level, averaging lambda_effective over archetypes weighted by their
+      default_proportion recovers the calibrated λ if and only if the weighted harmonic
+      mean of multipliers equals 1.0. Current archetype multipliers are calibrated to
+      approximately satisfy this constraint. [DIRECTIONAL — exact recovery depends on
+      archetype mix; verify via SMM recalibration when mix changes significantly.]
+
+    Additional post-hoc modifiers (directional deviations from calibrated baseline):
+      1. AE load amplification (logistic; per-archetype ae_sensitivity [ASSUMED]).
+         [DIRECTIONAL — amplifies calibrated hazard; magnitudes ASSUMED]
+      2. Belief deflation: low trust accelerates dropout [DIRECTIONAL].
+         [DIRECTIONAL — amplifies calibrated hazard; magnitudes ASSUMED]
+
+    Parameters
+    ----------
+    ae_sensitivity_array : np.ndarray | None
+        Per-patient AE sensitivity override (0–1 scale). When None, the lookup
+        table _AE_SENSITIVITY_LOOKUP is used (keyed by archetype_id_array).
+        Pass a per-patient draw from the engine when individual variation matters.
 
     Returns dropout_prob array of shape (n_patients,), values in [0, 1].
     """
@@ -380,30 +483,39 @@ def dropout_hazard(
     lam = ta_lambda.lambda_months
     n = len(archetype_id_array)
 
+    archetype_idx = archetype_id_array.astype(np.int8)
+
+    # FIX H1: Scale λ per archetype rather than multiplying the hazard directly.
+    # This preserves the Weibull shape parameter κ and keeps the population-average
+    # hazard consistent with the calibrated (λ, κ) pair.
+    # lambda_effective = lambda / multiplier:  multiplier>1 → smaller λ → faster decay.
+    lambda_effective = lam / _DROPOUT_MULTIPLIERS[archetype_idx]
+
     # Vectorized Weibull conditional monthly probability (per-patient time)
     t_arr = np.asarray(time_months, dtype=np.float64)
     if t_arr.ndim == 0:
         t_arr = np.full(n, float(t_arr), dtype=np.float64)
     t_arr = np.maximum(t_arr, 0.0)
 
-    s_t  = np.where(t_arr > 0.0, np.exp(-((t_arr / lam) ** k)), 1.0)
-    s_t1 = np.exp(-(((t_arr + 1.0) / lam) ** k))
+    s_t  = np.where(t_arr > 0.0, np.exp(-((t_arr / lambda_effective) ** k)), 1.0)
+    s_t1 = np.exp(-(((t_arr + 1.0) / lambda_effective) ** k))
     hazard = 1.0 - s_t1 / np.maximum(s_t, 1e-15)
 
-    # Apply per-archetype multiplier — vectorized lookup (20-50x faster than Python loop)
-    # Build lookup array once; index with archetype_ids
-    hazard *= _DROPOUT_MULTIPLIERS[archetype_id_array.astype(np.int8)]
-
-    # AE load amplification: logistic modifier
-    # α = 3.0 [ASSUMED — sweep [1.5, 5.0]].
-    # When cumulative_ae = 0.5 (moderate load), this adds +hazard × 0.36.
-    ae_alpha = 3.0
+    # FIX H4: Per-archetype AE sensitivity replaces hardcoded ae_alpha=3.0.
+    # ae_alpha is mapped from ae_sensitivity ∈ [0,1] to logistic α ∈ [1.5, 5.0].
+    # [DIRECTIONAL — amplifies calibrated hazard; magnitudes ASSUMED]
+    if ae_sensitivity_array is not None:
+        ae_sens = np.asarray(ae_sensitivity_array, dtype=np.float64)
+    else:
+        ae_sens = _AE_SENSITIVITY_LOOKUP[archetype_idx]
+    ae_alpha = 1.5 + 3.5 * ae_sens   # maps [0,1] → [1.5, 5.0]
     ae_modifier = 1.0 / (1.0 + np.exp(-ae_alpha * (cumulative_ae - 0.5)))
     hazard *= (1.0 + ae_modifier)
 
     # Belief deflation: patients with low trial trust drop out faster.
     # Logistic: when belief < 0.3, significant upward hazard adjustment.
     # Direction grounded in treatment expectation literature; steepness ASSUMED.
+    # [DIRECTIONAL — amplifies calibrated hazard; magnitudes ASSUMED]
     trust_alpha = 4.0  # [ASSUMED]
     trust_modifier = 1.0 / (1.0 + np.exp(trust_alpha * (belief - 0.4)))
     hazard *= (1.0 + 0.5 * trust_modifier)
@@ -494,10 +606,20 @@ def adherence_probability(
     if institutional_trust is not None:
         # Institutional trust (slow, sponsor-signal-driven) governs structural commitment
         # Belief (fast, AE-driven) governs execution compliance
-        # Combined modifier: geometric mean to avoid double-counting [DIRECTIONAL structure]
-        belief_modifier = 0.8 + 0.2 * belief  # fast belief effect (AE-driven)
-        trust_modifier = 0.9 + 0.2 * institutional_trust  # slow trust effect (sponsor-driven)
-        base *= belief_modifier * trust_modifier
+        # FIX C8: Combined via geometric mean sqrt(A * B), NOT arithmetic product A*B.
+        # Geometric mean is correct when both factors draw on partially overlapping
+        # latent constructs (trial confidence): it dampens double-counting of the
+        # shared variance component. An arithmetic product A*B would over-penalise
+        # when both are simultaneously low (or over-reward when both high).
+        # Coefficients adjusted to 0.4 (from 0.2) so that each individual factor
+        # still reaches max 1.2, and the geometric mean at (belief=1, trust=1) gives
+        # sqrt(1.2 * 1.2) = 1.2. To target exactly max ≈ 1.1 we use 0.3:
+        #   each factor max = 0.8 + 0.3 = 1.1; sqrt(1.1 * 1.1) = 1.1 ✓
+        #   each factor min = 0.8 + 0.0 = 0.8; sqrt(0.8 * 0.8) = 0.8 ✓
+        # [DIRECTIONAL structure; 0.3 coefficient DIRECTIONAL]
+        belief_modifier = 0.8 + 0.3 * belief                  # fast belief; range [0.8, 1.1]
+        trust_modifier  = 0.8 + 0.3 * institutional_trust     # slow trust;  range [0.8, 1.1]
+        base *= np.sqrt(belief_modifier * trust_modifier)      # geometric mean; range [0.8, 1.1]
     else:
         # Backward-compatible: single belief governs both [existing code]
         belief_modifier = 0.8 + 0.3 * belief
@@ -513,23 +635,36 @@ def adherence_probability(
     base *= burden_factor
 
     # AE load: high AE → reduced adherence motivation [DIRECTIONAL]
-    ae_penalty = 0.15 * cumulative_ae  # [ASSUMED magnitude]
+    # Reduced from 0.15: partial overlap with trial_fatigue inflow from AE events;
+    # see engine.py fatigue accumulation. [DIRECTIONAL magnitude; sensitivity sweep [0.05, 0.15]]
+    ae_penalty = 0.08 * cumulative_ae
     base -= ae_penalty
 
-    # Personality modifiers: applied as multiplicative deviation from archetype mean
-    # (multiplicative preserves [0,1] bounds; additive can exceed bounds)
-    # Centered at 0.5 so deviation from midpoint drives the effect.
-    # Coefficients are deflated from bivariate r-values to account for archetype
-    # baseline already absorbing mean-level personality differences per archetype.
+    # FIX H8: Personality modifiers applied on the log-odds scale, not the probability scale.
+    # Literature r-values (Molloy et al. 2014 and others) represent Pearson correlations
+    # between trait scores and adherence; these correspond to additive effects on log-odds,
+    # not multiplicative effects on probability. The previous multiplicative modifier on the
+    # probability scale was mathematically incorrect for r-value–derived effect sizes.
+    # Conversion: coefficient_logit ≈ logit(0.5 + r_deflated) - logit(0.5),
+    # where r_deflated = r × 0.5 archetype-overlap discount.
+    #   C:  r=0.149 (Molloy 2014), ×0.5 → 0.075;  logit(0.575)-logit(0.5) ≈ 0.32
+    #   N:  r≈0.10 (West Sweden PMC3065484), ×0.5→0.05; logit(0.45)-logit(0.5) ≈ 0.20
+    #   PC: r=0.12 (Brandes & Mullan 2014), ×0.5→0.06;  logit(0.56)-logit(0.5) ≈ 0.24
+    # Source: Molloy et al. (2014), Annals of Behavioral Medicine, DOI:10.1007/s12160-013-9552-4
+    # [GROUNDED direction (Molloy 2014, Brandes & Mullan 2014); log-odds coefficients DIRECTIONAL]
     if conscientiousness is not None or neuroticism is not None or personal_control is not None:
-        c_effect  = 0.08 * ((conscientiousness  - 0.5) if conscientiousness  is not None else np.zeros_like(base))
-        n_effect  = 0.05 * ((neuroticism        - 0.5) if neuroticism        is not None else np.zeros_like(base))
-        pc_effect = 0.06 * ((personal_control   - 0.5) if personal_control   is not None else np.zeros_like(base))
-        # C: Molloy 2014 r=0.149, ×0.5 archetype overlap → 0.08 [DIRECTIONAL magnitude]
-        # N: West Sweden PMC3065484 multivariate β=-0.029; 0.05 deflated [DIRECTIONAL magnitude]
-        # PC: Brandes & Mullan 2014 r=0.12, ×0.5 overlap → 0.06 [DIRECTIONAL magnitude]
-        personality_modifier = np.clip(1.0 + c_effect - n_effect + pc_effect, 0.7, 1.3)
-        base *= personality_modifier
+        # Convert current base probability to log-odds
+        log_odds = np.log(np.clip(base, 1e-6, 1.0 - 1e-6) / np.clip(1.0 - base, 1e-6, 1.0 - 1e-6))
+        # Additive personality effects on log-odds scale (centered at trait=0.5)
+        c_effect  = 0.32 * ((conscientiousness  - 0.5) if conscientiousness  is not None else np.zeros_like(base))
+        n_effect  = 0.20 * ((neuroticism        - 0.5) if neuroticism        is not None else np.zeros_like(base))
+        pc_effect = 0.24 * ((personal_control   - 0.5) if personal_control   is not None else np.zeros_like(base))
+        # C:  logit(0.5+0.08)-logit(0.5)≈0.32 [DIRECTIONAL magnitude]
+        # N:  logit(0.5-0.05)-logit(0.5)≈0.20 [DIRECTIONAL magnitude]
+        # PC: logit(0.5+0.06)-logit(0.5)≈0.24 [DIRECTIONAL magnitude]
+        log_odds = log_odds + c_effect - n_effect + pc_effect
+        # Convert back to probability
+        base = 1.0 / (1.0 + np.exp(-log_odds))
 
     return np.clip(base, 0.0, 1.0).astype(np.float32)
 
@@ -543,6 +678,7 @@ def visit_compliance_probability(
     site_access_score: np.ndarray,
     belief: np.ndarray,
     protocol_visit_burden: float,
+    site_burden_level: float = 0.0,
 ) -> np.ndarray:
     """Probability that a patient attends their scheduled visit this round.
 
@@ -584,6 +720,14 @@ def visit_compliance_probability(
     # Trust: high belief → patient shows up even when inconvenient [DIRECTIONAL]
     trust_boost = 0.05 * (belief - 0.5)  # small effect [ASSUMED]
     base += trust_boost
+
+    # FIX H6: Site operational burden reduces visit compliance.
+    # Stressed sites (high staff turnover, multiple concurrent trials, under-resourced)
+    # have systematically lower protocol adherence independent of patient-level factors.
+    # [DIRECTIONAL — stressed sites have lower protocol adherence;
+    #  0.12 coefficient ASSUMED; sweep [0.05, 0.20]]
+    site_penalty = 0.12 * site_burden_level
+    base -= site_penalty
 
     return np.clip(base, 0.0, 1.0).astype(np.float32)
 
@@ -683,6 +827,14 @@ def enrollment_rate_per_site_per_month(
 # Grade 1 (mild): 0.05; Grade 2 (moderate): 0.15; Grade 3 (severe): 0.40;
 # Grade 4 (life-threatening): 0.80.
 # [DIRECTIONAL] — direction of ordering is CTCAE-grounded; exact weights ASSUMED.
+#
+# M8: AE grade occurrence distribution used in engine.py: [0.60, 0.25, 0.12, 0.03] (grades 1–4).
+# Grade distribution [ASSUMED — no trial-population-specific meta-analysis;
+#  derived from WHO-ART grade distributions; sweep each ±50%]
+#
+# M7: ae_burden_increment in engine.py = mean_AE_load × 0.15 per round fed to safety signal stock.
+# 0.15 scaling factor [ASSUMED — no empirical anchor; sweep [0.05, 0.25];
+#  see safety signal calibration note in engine.py]
 AE_GRADE_WEIGHT = {1: 0.05, 2: 0.15, 3: 0.40, 4: 0.80}
 
 

@@ -107,6 +107,37 @@ def apply_policy(policy: PolicyConfig) -> dict[str, Any]:
     )
     params["visits_per_month"] = round(max(0.5, min(8.0, visits)), 2)
 
+    # amendment_appetite: higher appetite → more amendments → higher site burden
+    # [DIRECTIONAL — higher appetite → more amendments → higher site burden]
+    params["amendment_initiation_rate_modifier"] = round(0.5 + 0.8 * policy.amendment_appetite, 3)
+
+    # adaptive_design: adaptive trials can accelerate enrollment
+    # [DIRECTIONAL — adaptive designs can accelerate enrollment; 10% magnitude ASSUMED]
+    params["adaptive_design_enabled"] = policy.adaptive_design >= 0.5
+    params["enrollment_rate_modifier"] = round(
+        params["enrollment_rate_modifier"] * (1.0 + 0.10 * policy.adaptive_design), 3
+    )
+
+    # enrichment_strategy: narrow eligibility trades speed for retention
+    # [DIRECTIONAL — enrichment trades enrollment speed for retention; magnitudes ASSUMED]
+    params["enrichment_factor"] = round(policy.enrichment_strategy, 3)
+    params["enrollment_rate_modifier"] = round(
+        params["enrollment_rate_modifier"] * (1.0 - 0.30 * policy.enrichment_strategy), 3
+    )
+    params["dropout_rate_modifier"] = round(1.0 - 0.20 * policy.enrichment_strategy, 3)
+
+    # placebo_ratio: more placebo → more lack-of-efficacy dropout
+    # [DIRECTIONAL — placebo patients more likely to dropout for efficacy failure; 40% max ASSUMED]
+    params["efficacy_dropout_modifier"] = round(1.0 + 0.40 * policy.placebo_ratio, 3)
+
+    # dsmb_oversight: intensive DSMB reviews → lower effective safety signal threshold
+    # [DIRECTIONAL — intensive DSMB reviews more frequent interim analyses; threshold ASSUMED]
+    params["dsmb_sensitivity"] = round(0.3 + 0.5 * policy.dsmb_oversight, 3)
+
+    # safety_stopping_conservatism: conservative sponsors set higher bars for stopping
+    # [DIRECTIONAL — conservative sponsors set higher bars for stopping; ASSUMED linear mapping]
+    params["safety_stopping_threshold"] = round(0.6 + 0.4 * policy.safety_stopping_conservatism, 3)
+
     return params
 
 

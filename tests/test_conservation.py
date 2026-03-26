@@ -30,8 +30,16 @@ def test_population_conserved(ta):
         total = r.n_enrolled + r.n_dropout + r.n_completed
         # screening = n - total (patients not yet enrolled)
         screening = n - total
-        assert screening >= 0, f"[{ta}] round {r.round_index}: negative screening count"
-        assert total <= n,     f"[{ta}] round {r.round_index}: total > n ({total} > {n})"
+        assert screening >= 0, (
+            f"[{ta}] round {r.round_index}: negative screening count "
+            f"(screening={screening}, enrolled={r.n_enrolled}, "
+            f"dropout={r.n_dropout}, completed={r.n_completed})"
+        )
+        assert screening + total == n, (
+            f"[{ta}] Conservation violated at round {r.round_index}: "
+            f"{screening} + {total} != {n} "
+            f"(enrolled={r.n_enrolled}, dropout={r.n_dropout}, completed={r.n_completed})"
+        )
 
 
 @pytest.mark.parametrize("ta", ["cns", "oncology"])

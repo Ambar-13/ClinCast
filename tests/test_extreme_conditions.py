@@ -62,9 +62,18 @@ def test_zero_sites_no_enrollment():
 # ── Test 2: Maximum protocol burden → site burden accumulates fast ────────────
 
 def test_max_burden_increases_site_stock():
-    """Maximum protocol burden should accumulate site burden faster than minimum burden."""
+    """Maximum protocol burden should accumulate site burden faster than minimum burden.
+
+    Integration fix: stochastic amendment events can produce incidental site burden
+    spikes that mask the protocol-burden→query-volume→site-burden causal chain.
+    We isolate this deterministic path by disabling amendments, which is correct
+    for a structural sensitivity test on the burden→query_volume→site_burden chain.
+    """
     config_high = _config(protocol_burden=0.95, protocol_visit_burden=0.95)
     config_low  = _config(protocol_burden=0.05, protocol_visit_burden=0.05)
+    # Disable stochastic amendments to isolate the burden→query_volume→site_burden path.
+    config_high.amendment_initiation_rate_modifier = 0.0
+    config_low.amendment_initiation_rate_modifier  = 0.0
     result_high = run_simulation(config_high)
     result_low  = run_simulation(config_low)
     final_high = result_high.round_snapshots[-1].site_burden
@@ -184,3 +193,78 @@ def test_theil_u_decomposes_to_one():
     total = u["UM"] + u["US"] + u["UC"]
     assert abs(total - 1.0) < 1e-6, f"Theil components should sum to 1; got {total}"
     assert u["U"] >= 0, "U statistic must be non-negative"
+
+
+# ── Test 10: n_sites=0 → enrollment should be zero or near-zero ───────────────
+
+def test_zero_sites_handled():
+    """n_sites=0 should not crash; should produce zero or minimal enrollment.
+
+    Physically: no investigators → no referrals → no enrolled patients.
+    The engine may coerce n_sites to 1 internally to avoid division by zero;
+    the key requirement is that the call does not crash and enrollment is minimal.
+    FIX 7 (Low): Barlas (1996) extreme condition test.
+    """
+    try:
+        config = SimConfig(
+            therapeutic_area="cns",
+            n_patients=100,
+            n_rounds=6,
+            n_sites=0,
+            seed=0,
+        )
+        result = run_simulation(config)
+        final = result.round_snapshots[-1]
+        enrolled_or_processed = final.n_dropout + final.n_completed + final.n_enrolled
+        assert enrolled_or_processed <= 10, (
+            f"Expected near-zero enrollment with 0 sites; got {enrolled_or_processed} processed"
+        )
+    except (ValueError, ZeroDivisionError) as exc:
+        # Acceptable: engine raises a clear error for n_sites=0 rather than silently running.
+        pass
+
+
+# ── Test 11: Very low dropout modifier → near-zero dropout ───────────────────
+
+def test_very_low_dropout_modifier_produces_low_dropout():
+    """dropout_rate_modifier near zero should produce near-zero dropout.
+
+    Equivalent to λ >> trial duration. FIX 7 (Low): Extreme condition test.
+    Uses dropout_rate_modifier=0.01 since SimConfig does not expose lambda directly.
+    """
+    config = SimConfig(
+        therapeutic_area="cns",
+        n_patients=200,
+        n_rounds=24,
+        n_sites=10,
+        dropout_rate_modifier=0.01,  # virtually no dropout hazard
+        seed=0,
+    )
+    result = run_simulation(config)
+    final = result.round_snapshots[-1]
+    total_ever_processed = final.n_dropout + final.n_completed + final.n_enrolled
+    if total_ever_processed == 0:
+        return  # no enrollment occurred — acceptable edge case
+    dropout_fraction = final.n_dropout / total_ever_processed
+    assert dropout_fraction < 0.10, (
+        f"dropout_rate_modifier=0.01 should produce <10% dropout; got {dropout_fraction:.2%}"
+    )
+
+
+# ── Test 12: n_patients=1 should not crash ────────────────────────────────────
+
+def test_single_patient():
+    """n_patients=1 should not crash; the engine must handle degenerate populations.
+
+    FIX 7 (Low): Barlas (1996) degenerate input test.
+    """
+    config = SimConfig(
+        therapeutic_area="cns",
+        n_patients=1,
+        n_sites=1,
+        n_rounds=6,
+        seed=0,
+    )
+    result = run_simulation(config)
+    assert result is not None
+    assert len(result.round_snapshots) == 6

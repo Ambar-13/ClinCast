@@ -111,13 +111,29 @@ class SimulatedMoments:
         us = (std_sim - std_obs) ** 2 / mse
         uc = 2.0 * (1.0 - rho) * std_sim * std_obs / mse
 
-        # Normalize to sum to 1 (numerical precision)
+        # FIX M9: The algebraic identity UM+US+UC = MSE means the sum should equal 1.0
+        # after each component is divided by MSE. A significant deviation indicates
+        # numerical error (e.g., too few moments for reliable std/corr estimates).
         total = um + us + uc
+        if abs(total - 1.0) > 0.01:
+            import warnings
+            warnings.warn(
+                f"Theil decomposition does not sum to 1.0 (got {total:.4f}). "
+                f"This indicates numerical error in MSE, std, or correlation computation. "
+                f"n_moments={len(m_sim)} may be too small for reliable decomposition."
+            )
+        # Still normalize for output but expose the raw sum so callers can detect issues.
+        # FIX M10: This uses the Sterman (1984, Dynamica) definition:
+        #   U = RMSE / RMS_obs, where RMS_obs = sqrt(mean(m_obs^2)).
+        #   U < 1 indicates the model outperforms a naive zero-forecast.
+        #   The alternative Theil U2 = RMSE/RMSE(naive_change_forecast) is NOT
+        #   implemented here; do not confuse the two definitions.
         return {
             "U":  math.sqrt(mse) / (math.sqrt(float(np.mean(m_obs**2))) + 1e-12),
             "UM": um / total,
             "US": us / total,
             "UC": uc / total,
+            "decomposition_sum": total,  # callers can detect numerical issues
         }
 
 
@@ -254,6 +270,7 @@ def run_smm(
     n_top_verify: int = 5,
     two_step: bool = False,
     seed: int = 0,
+    base_seed: int = 42,
 ) -> dict:
     """Full SMM calibration pipeline.
 
@@ -312,11 +329,25 @@ def run_smm(
     # then re-run Nelder-Mead with the efficient weighting matrix.
     # Source: McFadden (1989) Econometrica; Ruge-Murcia (CIREQ 2012).
     if two_step:
-        # Simulate n_lhs draws at the first-step optimum to estimate Ω̂
+        # Simulate n_lhs draws at the first-step optimum to estimate Ω̂.
+        # FIX C7: Each bootstrap call must use a DIFFERENT seed so that the
+        # moment draws are not identical. If all draws are identical, the
+        # deviation matrix is all-zeros and Ω̂ collapses to the 1e-8 regularizer,
+        # making the second-step weighting matrix meaningless. Varied seeds are
+        # essential for a valid covariance estimate.
         theta_1 = np.clip(opt.x, [b[0] for b in bounds], [b[1] for b in bounds])
         bootstrap_moments = np.zeros((n_lhs, target.n))
         for i in range(n_lhs):
-            res_i = simulator(theta_1)
+            import inspect as _inspect
+            _sim_params = _inspect.signature(simulator).parameters
+            if "seed" in _sim_params:
+                res_i = simulator(theta_1, seed=base_seed + i + 1)
+            else:
+                # Simulator doesn't accept seed; use a fresh per-call RNG to
+                # vary numpy global state so draws differ across iterations.
+                _rng_boot = np.random.default_rng(base_seed + i + 1)
+                np.random.seed(int(_rng_boot.integers(0, 2**31)))
+                res_i = simulator(theta_1)
             bootstrap_moments[i] = moment_extractor(res_i)
 
         omega = _newey_west_covariance(bootstrap_moments)

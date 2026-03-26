@@ -86,8 +86,11 @@ class PatientArchetype:
     archetype_id: ArchetypeID
 
     # DeGroot stubbornness α ∈ (0, 1). Higher = more anchored to own prior.
-    # Centola (2010) Science 329:1194: health behavior adoption in online
-    # networks showed convergence in ~5–8 rounds at α ≈ 0.7.
+    # M4 FIX: Johnson & Carnegie (2022) PMC8709162: DeGroot self-weight estimated from
+    # 5 patient networks, central estimate α=0.5, Beta(2,2) concentration.
+    # [GROUNDED for direction; DIRECTIONAL for magnitude — n=40, HIV-prevention context]
+    # (Previous citation — Centola 2010 Science 329:1194 — anchored health behavior
+    #  adoption speed, not DeGroot self-weight; incorrect source for this parameter.)
     stubbornness: float
 
     # Weibull λ multiplier relative to the TA baseline. A multiplier of 1.5
@@ -104,6 +107,8 @@ class PatientArchetype:
 
     # AE sensitivity: how much cumulative AE load increases dropout hazard.
     # Scale: 0 (insensitive) to 1 (one unit of AE load doubles hazard).
+    # Per-archetype values are [ASSUMED] — no empirical anchor mapping
+    # personality/archetype traits to logistic AE-hazard sensitivity.
     ae_sensitivity: float
 
     # Fraction of grade 1-2 AEs actually reported by this archetype.
@@ -120,13 +125,19 @@ class PatientArchetype:
     default_proportion: float
 
     # Big Five Conscientiousness trait score (0-1, normalized from standard scoring).
-    # Meta-analysis: Roberts MW et al. Psychological Bulletin 2009 — r=0.19 adherence correlation.
+    # Primary source: Molloy GJ et al. (2014) Annals of Behavioral Medicine,
+    # DOI:10.1007/s12160-013-9552-4 — meta-analysis (16 studies, N=3476):
+    # r=0.149 for Conscientiousness → medication adherence (primary endpoint).
+    # Roberts et al. (2009) Psychological Bulletin reports r=0.19 for health behaviors
+    # broadly; Molloy 2014 is the more specific medication-adherence estimate used in
+    # response.py coefficient derivation.
     # [GROUNDED direction; archetype-level values DIRECTIONAL]
     conscientiousness: float = 0.5   # default middle
 
     # IPQ-R Personal Control subscale (0-1).
-    # Hagger MS & Orbell S, Health Psychology Review 2003, meta-analysis n=45 studies:
-    # Personal control predicts coping and treatment adherence (mean r=0.21).
+    # M5 FIX: Brandes & Mullan (2014) Health Psych Rev meta (30 CSM studies):
+    # r=0.12 for personal control → medication adherence.
+    # Note: Hagger & Orbell (2003) r=0.21 is coping/adaptation, not medication adherence.
     # [GROUNDED direction; archetype values DIRECTIONAL]
     personal_control: float = 0.5    # default middle
 
@@ -134,6 +145,10 @@ class PatientArchetype:
     # Bogg & Roberts (2004) Psychological Bulletin meta-analysis (n=194 studies):
     # Neuroticism shows r≈-0.09 to -0.15 with health behaviors.
     # Direction is GROUNDED; weaker than Conscientiousness.
+    # M18 FIX: West Sweden coefficient source — Axelsson et al. (2013) West Sweden
+    # Study (PMC3065484) — COPD inhalation adherence context. Applied cross-TA:
+    # [DIRECTIONAL — direction consistent across contexts; magnitude may differ in
+    #  non-pulmonary populations]
     # Coefficient deflated in adherence formula to account for TREATMENT_NAIVE_HIGH_ANXIETY
     # archetype already absorbing high-N patients. [GROUNDED direction; values DIRECTIONAL]
     neuroticism: float = 0.5
@@ -151,7 +166,7 @@ ARCHETYPES: dict[ArchetypeID, PatientArchetype] = {
         dropout_hazard_multiplier=1.4,
         # MEMS lower bound cohort.
         baseline_adherence=0.68,
-        # Highly sensitive: AE confirms fears.
+        # Highly sensitive: AE confirms fears. [ASSUMED]
         ae_sensitivity=0.75,
         # Limited ability to distinguish expected vs. unexpected AEs.
         ae_reporting_fraction=0.45,
@@ -173,7 +188,7 @@ ARCHETYPES: dict[ArchetypeID, PatientArchetype] = {
         dropout_hazard_multiplier=0.55,
         # High adherence — MEMS upper bound.
         baseline_adherence=0.88,
-        # Low sensitivity: understands AE profile, distinguishes expected effects.
+        # Low sensitivity: understands AE profile, distinguishes expected effects. [ASSUMED]
         ae_sensitivity=0.25,
         # High reporting: health literate, motivated to contribute data quality.
         ae_reporting_fraction=0.85,
@@ -196,7 +211,7 @@ ARCHETYPES: dict[ArchetypeID, PatientArchetype] = {
         dropout_hazard_multiplier=1.2,
         # Adherence depends heavily on caregiver organisation.
         baseline_adherence=0.72,
-        # High sensitivity: functional decline amplifies AE concerns.
+        # High sensitivity: functional decline amplifies AE concerns. [ASSUMED]
         ae_sensitivity=0.65,
         # Low self-reporting; AEs reported by caregiver (less complete).
         ae_reporting_fraction=0.50,
@@ -218,7 +233,7 @@ ARCHETYPES: dict[ArchetypeID, PatientArchetype] = {
         dropout_hazard_multiplier=1.35,
         # Adherence moderate — less pharmacy access for refills.
         baseline_adherence=0.70,
-        # Moderate AE sensitivity.
+        # Moderate AE sensitivity. [ASSUMED]
         ae_sensitivity=0.50,
         # Low reporting: logistical barriers to contacting site staff.
         ae_reporting_fraction=0.40,
@@ -240,7 +255,7 @@ ARCHETYPES: dict[ArchetypeID, PatientArchetype] = {
         dropout_hazard_multiplier=0.70,
         # MEMS upper end.
         baseline_adherence=0.85,
-        # Informed: can contextualise AEs. Less likely to over-react.
+        # Informed: can contextualise AEs. Less likely to over-react. [ASSUMED]
         ae_sensitivity=0.30,
         # High literacy, active self-tracking (health apps, wearables).
         ae_reporting_fraction=0.80,

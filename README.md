@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="https://raw.githubusercontent.com/Ambar-13/ClinFish/master/logo.svg?sanitize=true" alt="ClinFish" width="160" height="130"/>
+  <img src="https://raw.githubusercontent.com/Ambar-13/ClinFish/master/logo.png" alt="ClinFish" width="160" height="130"/>
 
   <h1>ClinFish</h1>
 

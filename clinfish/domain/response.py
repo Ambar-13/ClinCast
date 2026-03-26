@@ -647,9 +647,9 @@ def adherence_probability(
     # probability scale was mathematically incorrect for r-value–derived effect sizes.
     # Conversion: coefficient_logit ≈ logit(0.5 + r_deflated) - logit(0.5),
     # where r_deflated = r × 0.5 archetype-overlap discount.
-    #   C:  r=0.149 (Molloy 2014), ×0.5 → 0.075;  logit(0.575)-logit(0.5) ≈ 0.32
-    #   N:  r≈0.10 (West Sweden PMC3065484), ×0.5→0.05; logit(0.45)-logit(0.5) ≈ 0.20
-    #   PC: r=0.12 (Brandes & Mullan 2014), ×0.5→0.06;  logit(0.56)-logit(0.5) ≈ 0.24
+    #   C:  r=0.149 (Molloy 2014), ×0.5 → 0.075 (rounded up to 0.08);  logit(0.58)-logit(0.5) ≈ +0.32
+    #   N:  r≈0.10 (West Sweden PMC3065484), ×0.5→0.05; logit(0.45)-logit(0.5) ≈ -0.20  (negative: high N → lower adherence)
+    #   PC: r=0.12 (Brandes & Mullan 2014), ×0.5→0.06;  logit(0.56)-logit(0.5) ≈ +0.24
     # Source: Molloy et al. (2014), Annals of Behavioral Medicine, DOI:10.1007/s12160-013-9552-4
     # [GROUNDED direction (Molloy 2014, Brandes & Mullan 2014); log-odds coefficients DIRECTIONAL]
     if conscientiousness is not None or neuroticism is not None or personal_control is not None:
@@ -659,9 +659,9 @@ def adherence_probability(
         c_effect  = 0.32 * ((conscientiousness  - 0.5) if conscientiousness  is not None else np.zeros_like(base))
         n_effect  = 0.20 * ((neuroticism        - 0.5) if neuroticism        is not None else np.zeros_like(base))
         pc_effect = 0.24 * ((personal_control   - 0.5) if personal_control   is not None else np.zeros_like(base))
-        # C:  logit(0.5+0.08)-logit(0.5)≈0.32 [DIRECTIONAL magnitude]
-        # N:  logit(0.5-0.05)-logit(0.5)≈0.20 [DIRECTIONAL magnitude]
-        # PC: logit(0.5+0.06)-logit(0.5)≈0.24 [DIRECTIONAL magnitude]
+        # C:  logit(0.58)-logit(0.5) ≈ +0.32 [DIRECTIONAL magnitude; positive → more adherent]
+        # N:  logit(0.45)-logit(0.5) ≈ -0.20 [DIRECTIONAL; subtracted below → high N reduces adherence]
+        # PC: logit(0.56)-logit(0.5) ≈ +0.24 [DIRECTIONAL magnitude; positive → more adherent]
         log_odds = log_odds + c_effect - n_effect + pc_effect
         # Convert back to probability
         base = 1.0 / (1.0 + np.exp(-log_odds))

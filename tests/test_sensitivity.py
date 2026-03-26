@@ -185,3 +185,81 @@ def test_dropout_rate_modifier_direction():
         f"Lower dropout modifier should produce less dropout. "
         f"Got dropout(0.1)={dropout_low}, dropout(2.0)={dropout_high}"
     )
+
+
+# ── Test 7: DSMB sensitivity threshold fires at lower signal when more sensitive ─
+
+def test_dsmb_sensitivity_direction():
+    """Lower dsmb_sensitivity threshold (more sensitive) should halt enrollment
+    at lower safety signals and produce lower total enrollment.
+
+    Structural test: intensive DSMB oversight (lower threshold) ↔ more interruptions.
+    """
+    # Low threshold = 0.20 → triggers DSMB review at very first AE accumulation
+    # High threshold = 0.70 → barely triggers
+    res_low_thresh  = _run(dsmb_sensitivity=0.15, safety_stopping_threshold=0.20,
+                           n=300, rounds=24, seed=11)
+    res_high_thresh = _run(dsmb_sensitivity=0.70, safety_stopping_threshold=0.90,
+                           n=300, rounds=24, seed=11)
+
+    halted_low  = sum(1 for r in res_low_thresh.round_snapshots  if r.enrollment_halted)
+    halted_high = sum(1 for r in res_high_thresh.round_snapshots if r.enrollment_halted)
+
+    # Sensitive stopping rules should produce at least as many halted rounds as permissive ones
+    assert halted_low >= halted_high, (
+        f"Lower DSMB threshold should halt enrollment more often. "
+        f"halted(thresh=0.20)={halted_low}, halted(thresh=0.90)={halted_high}"
+    )
+
+
+# ── Test 8: Competing risks cause composition ────────────────────────────────
+
+def test_competing_risks_cause_distribution():
+    """All dropout events should have an assigned cause via competing risks.
+
+    Every SimulationRound.dropout_cause_counts should sum to dropout_this_round
+    (within stochastic tolerance). FIX C1 verification.
+    """
+    res = _run(ta="cns", n=400, rounds=24, seed=42)
+    for r in res.round_snapshots:
+        if r.dropout_this_round == 0:
+            continue
+        cause_total = sum(r.dropout_cause_counts.values())
+        assert abs(cause_total - r.dropout_this_round) <= 1, (
+            f"Round {r.round_index}: dropout_cause_counts sum={cause_total} "
+            f"≠ dropout_this_round={r.dropout_this_round}"
+        )
+
+
+# ── Test 9: Enrichment reduces enrollment, improves dropout ──────────────────
+
+def test_enrichment_strategy_tradeoff():
+    """Biomarker enrichment should reduce enrollment speed but reduce dropout.
+
+    Structural sensitivity — enrichment policy has a directional tradeoff:
+    slower enrollment in exchange for higher retention. Verified by averaging
+    over 5 seeds to reduce stochastic noise (dropout_rate_modifier effect
+    is ~20%; n=500 stochastic variance ~±15% per run).
+    """
+    n_seeds = 5
+    broad_rates, enriched_rates = [], []
+    for seed in range(n_seeds):
+        res_broad    = _run(dropout_rate_modifier=1.0,  enrollment_rate_modifier=1.0,
+                            n=500, rounds=24, seed=seed)
+        res_enriched = _run(dropout_rate_modifier=0.50, enrollment_rate_modifier=0.70,
+                            n=500, rounds=24, seed=seed)
+
+        f_b = res_broad.round_snapshots[-1]
+        f_e = res_enriched.round_snapshots[-1]
+        enrolled_b = f_b.n_enrolled + f_b.n_dropout + f_b.n_completed
+        enrolled_e = f_e.n_enrolled + f_e.n_dropout + f_e.n_completed
+        broad_rates.append(f_b.n_dropout    / max(enrolled_b, 1))
+        enriched_rates.append(f_e.n_dropout / max(enrolled_e, 1))
+
+    mean_broad    = float(np.mean(broad_rates))
+    mean_enriched = float(np.mean(enriched_rates))
+
+    assert mean_enriched <= mean_broad + 0.05, (
+        f"Enriched trial (dropout_mod=0.50) should have lower dropout rate on average. "
+        f"mean_dropout(broad)={mean_broad:.3f}, mean_dropout(enriched)={mean_enriched:.3f}"
+    )

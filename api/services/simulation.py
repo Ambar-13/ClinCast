@@ -165,6 +165,14 @@ def run_simulation_request(req: SimulateRequest) -> SimulateResponse:
     protocol_burden    = _compute_protocol_burden(req)
     visit_burden       = _compute_visit_burden(req)
 
+    # Compute final enrollment rate modifier accounting for adaptive design and enrichment
+    enroll_rate_mod = req.enrollment_rate_modifier
+    enrichment = getattr(req, "enrichment_factor", 0.0) or 0.0
+    if getattr(req, "adaptive_design_enabled", False):
+        enroll_rate_mod = round(enroll_rate_mod * 1.10, 3)   # 10% adaptive design boost [DIRECTIONAL]
+    if enrichment > 0:
+        enroll_rate_mod = round(enroll_rate_mod * (1.0 - 0.30 * enrichment), 3)  # enrichment slows enrollment
+
     if req.use_preset and req.therapeutic_area in SCENARIO_REGISTRY:
         config = SCENARIO_REGISTRY[req.therapeutic_area]()
         config.n_patients            = req.n_patients
@@ -174,8 +182,16 @@ def run_simulation_request(req: SimulateRequest) -> SimulateResponse:
         config.protocol_visit_burden = visit_burden
         config.monitoring_active     = req.monitoring_active
         config.seed                  = req.seed
-        config.enrollment_rate_modifier = req.enrollment_rate_modifier
-        config.injection_events      = [_schema_to_injection(e) for e in req.injection_events]
+        config.enrollment_rate_modifier      = enroll_rate_mod
+        config.patient_support_program       = req.patient_support_program
+        config.amendment_initiation_rate_modifier = req.amendment_initiation_rate_modifier
+        config.dropout_rate_modifier         = req.dropout_rate_modifier * (1.0 - 0.20 * enrichment) if enrichment > 0 else req.dropout_rate_modifier
+        config.efficacy_dropout_modifier     = req.efficacy_dropout_modifier
+        config.dsmb_sensitivity              = req.dsmb_sensitivity
+        config.safety_stopping_threshold     = req.safety_stopping_threshold
+        config.injection_events              = [_schema_to_injection(e) for e in req.injection_events]
+        if req.visits_per_month is not None:
+            config.visits_per_month = req.visits_per_month
         if config.pop_config is not None:
             config.pop_config.n_patients = req.n_patients
             config.pop_config.n_sites    = req.n_sites
@@ -189,8 +205,16 @@ def run_simulation_request(req: SimulateRequest) -> SimulateResponse:
             protocol_visit_burden=visit_burden,
             monitoring_active=req.monitoring_active,
             seed=req.seed,
-            enrollment_rate_modifier=req.enrollment_rate_modifier,
+            enrollment_rate_modifier=enroll_rate_mod,
             injection_events=[_schema_to_injection(e) for e in req.injection_events],
+            # Policy-derived modifiers — all now properly wired from request schema to engine
+            patient_support_program=req.patient_support_program,
+            visits_per_month=req.visits_per_month if req.visits_per_month is not None else 2.0,
+            amendment_initiation_rate_modifier=req.amendment_initiation_rate_modifier,
+            dropout_rate_modifier=req.dropout_rate_modifier * (1.0 - 0.20 * enrichment) if enrichment > 0 else req.dropout_rate_modifier,
+            efficacy_dropout_modifier=req.efficacy_dropout_modifier,
+            dsmb_sensitivity=req.dsmb_sensitivity,
+            safety_stopping_threshold=req.safety_stopping_threshold,
         )
 
     # ── Competitive pressure → inject negative belief event ───────────────────

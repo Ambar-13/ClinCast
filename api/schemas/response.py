@@ -23,6 +23,11 @@ class RoundSnapshot(BaseModel):
     data_quality:          float
     site_burden:           float
     n_injection_seeded:    int
+    # Fields added to SimulationRound after initial schema — now surfaced in API responses
+    active_sites:          float = 0.0     # fraction of sites through activation pipeline
+    enrollment_halted:     bool  = False   # True when clinical hold paused enrollment
+    n_censored:            int   = 0       # late enrollees who could not complete protocol
+    dropout_cause_counts:  dict  = {}      # {cause_name: count} per round from competing risks
 
 
 class TaggedValueOut(BaseModel):

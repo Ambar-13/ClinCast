@@ -118,3 +118,6 @@ uploads/
 # Simulation result caches
 results/
 simulation_cache/
+
+# System dynamics docs — local research notes only, never commit
+docs/system_dynamics/

@@ -118,16 +118,34 @@ class PatientPipelineStock:
             )
 
     @property
+    def n_ever_enrolled(self) -> int:
+        """Patients who exited screening and entered the trial (enrolled + dropout + completed).
+
+        This is the correct denominator for dropout_rate and completion_rate.
+        Excludes patients still in screening who were never enrolled.
+        """
+        return self.n_enrolled + self.n_dropout + self.n_completed
+
+    @property
     def dropout_rate(self) -> float:
-        if self.n_total == 0:
+        """Fraction of ever-enrolled patients who dropped out.
+
+        Denominator = n_enrolled + n_dropout + n_completed (ever entered trial).
+        Excludes screening patients who were never enrolled — using n_total as
+        denominator would incorrectly dilute the rate with unrandomized patients.
+        """
+        ever_enrolled = self.n_ever_enrolled
+        if ever_enrolled == 0:
             return 0.0
-        return self.n_dropout / self.n_total
+        return self.n_dropout / ever_enrolled
 
     @property
     def completion_rate(self) -> float:
-        if self.n_total == 0:
+        """Fraction of ever-enrolled patients who completed the trial."""
+        ever_enrolled = self.n_ever_enrolled
+        if ever_enrolled == 0:
             return 0.0
-        return self.n_completed / self.n_total
+        return self.n_completed / ever_enrolled
 
     def conservation_check(self) -> bool:
         return (

@@ -295,19 +295,26 @@ class InstitutionalActor:
     # DiMaggio & Powell (1983): coercive, mimetic, normative pressures create
     # institutional convergence. Regulators are most stubborn (mandate-driven);
     # sites are most flexible (revenue-dependent on sponsor relationships).
+    # NOTE: reserved for future multi-institution agent expansion; currently
+    # only amendment_initiation_rate is consumed by the simulation engine.
     stubbornness: float
 
     # Probability per round that this actor initiates a protocol amendment.
     # Tufts 2024: 76% of trials have ≥1 amendment; 3.3/protocol over avg
     # 3–4 year trial. ~3.3/(48 months) ≈ 0.07 per month per trial.
+    # [ACTIVELY USED: _sponsor_amendment_draw() in engine.py]
     amendment_initiation_rate: float
 
     # Probability that a site activates within 90 days of selection
     # (NCI target). Observed median at cancer centers: 167 days (AACI 2018).
+    # NOTE: reserved for future site-heterogeneity extension; activation timing
+    # currently modeled via SiteActivationPipeline DELAY3 in stocks.py.
     site_activation_probability: float
 
     # Fraction of safety signals above threshold that triggers a response
     # (regulatory review, protocol modification, CRO audit).
+    # NOTE: reserved for future regulatory-actor expansion; threshold logic
+    # currently implemented directly in engine.py using SimConfig parameters.
     safety_response_threshold: float
 
 

@@ -462,10 +462,15 @@ def run_simulation(config: SimConfig) -> TrialOutputs:
         pop.state[enrolled_idx, COL_VISIT_BURDEN] = 1.0 - vis  # burden = non-compliance
 
         # 5. Synthetic AE generation and accumulation
-        # Grade distribution [ASSUMED]: 60% grade 1, 25% grade 2, 12% grade 3, 3% grade 4
+        # Grade distribution [ASSUMED — no universal TA-agnostic source]:
+        #   60% grade 1, 25% grade 2, 12% grade 3, 3% grade 4.
+        # Directional anchors: Oncology Phase III has higher severe AE rates
+        # (grade 3-4 up to 40%; NCI CTCAEv5 reports). Conservative priors used.
+        # Sweep ranges: grade3 [0.08, 0.20], grade4 [0.01, 0.08]
         ae_grade_probs = np.array([0.60, 0.25, 0.12, 0.03])
         ae_grades = rng.choice([1, 2, 3, 4], p=ae_grade_probs, size=n_enrolled)
-        ae_occurs = rng.random(n_enrolled) < 0.15  # baseline monthly AE rate [ASSUMED]
+        # baseline monthly AE rate [ASSUMED — sweep [0.08, 0.25]; TA-specific overrides needed]
+        ae_occurs = rng.random(n_enrolled) < 0.15
 
         ae_reporting = ae_reporting_fraction(
             archetype_id_array=pop.archetype_ids[enrolled_idx],

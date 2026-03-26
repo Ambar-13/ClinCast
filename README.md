@@ -1,6 +1,6 @@
-<div align="center">
-  <img src="https://raw.githubusercontent.com/Ambar-13/ClinFish/master/logo.png" alt="ClinFish" width="160" height="130"/>
-
+<p align="center">
+  <img src="logo.svg" alt="ClinFish" width="700" />
+</p>
   <h1>ClinFish</h1>
 
   <p>A behavioral simulation engine for clinical trials.<br/>

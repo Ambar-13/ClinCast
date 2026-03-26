@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="logo.svg" alt="ClinFish" width="700" />
+  <img src="logo.svg" alt="ClinFish" width="400" />
 </p>
   <h1>ClinFish</h1>
 

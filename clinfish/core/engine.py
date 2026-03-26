@@ -500,11 +500,13 @@ def run_simulation(config: SimConfig) -> TrialOutputs:
         # [DIRECTIONAL — Montori Cumulative Complexity Model (PMID 27417747); tau and coefficients ASSUMED; sweep tau in [3, 12]]
         fatigue = pop.state[enrolled_idx, COL_TRIAL_FATIGUE]
         # Visit inflow: normalized visits per month → fraction of max monthly burden (8 vpm)
-        visit_inflow = 0.04 * (config.visits_per_month / 8.0)  # [ASSUMED]
+        # Scaled by dt for dimensional consistency: inflow is a flow (units/month × months).
+        visit_inflow = dt * 0.04 * (config.visits_per_month / 8.0)  # [ASSUMED; sweep [0.02, 0.08]]
         # AE inflow: fraction of patients experiencing an AE this round
         ae_frac = float(ae_occurs.mean()) if len(ae_occurs) > 0 else 0.0
-        ae_inflow = 0.06 * ae_frac  # [ASSUMED magnitude]
-        # Recovery outflow: first-order decay with tau=6mo (Euler: outflow = fatigue/tau per month; half-life ~= 4.2 months)
+        ae_inflow = dt * 0.06 * ae_frac  # dt-scaled [ASSUMED magnitude; sweep [0.03, 0.12]]
+        # Recovery outflow: first-order decay with tau=6mo (Euler: outflow = (dt/tau)*fatigue)
+        # All three terms now scale symmetrically with dt — no net bias when dt ≠ 1.
         recovery_outflow = (dt / 6.0) * fatigue
         pop.state[enrolled_idx, COL_TRIAL_FATIGUE] = np.clip(
             fatigue + visit_inflow + ae_inflow - recovery_outflow, 0.0, 1.0,
@@ -627,6 +629,7 @@ def run_simulation(config: SimConfig) -> TrialOutputs:
             deviation_rate=deviation_rate,
             underreporting_fraction=underreporting,
             monitoring_active=config.monitoring_active,
+            dt=dt,   # dimensional consistency: all stock flows scaled by dt
         )
         # FIX 9 (H11): pass dt to safety_signal.update() for correct Euler scaling.
         stocks.safety_signal.update(ae_burden_increment, dt=config.months_per_round)

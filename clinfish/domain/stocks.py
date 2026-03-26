@@ -348,20 +348,27 @@ class DataQualityStock:
         deviation_rate: float,        # fraction of patients with ≥1 deviation this round
         underreporting_fraction: float,
         monitoring_active: bool = True,
+        dt: float = 1.0,
     ) -> None:
+        """Update data quality stock for one simulation step of length dt months.
+
+        Dimensional consistency: all flows scaled by dt so the stock evolves
+        correctly regardless of months_per_round (Euler integration).
+        Sister stocks SafetySignalStock and SiteBurdenStock both accept dt.
+        """
         # Krudys (PMC8979478): 32.8% of patients have ≥1 deviation over the
         # ENTIRE trial (~24 months). Per-round rate ≈ 1.6% (monthly rate
         # assuming uniform distribution: 1-(1-0.328)^(1/24) ≈ 0.016).
         # The deviation_rate passed in is the visit non-compliance rate per round
         # (~0.33 from visit_compliance = 0.67). We scale it to the per-round
         # protocol deviation rate which is much smaller.
-        per_round_deviation = deviation_rate * 0.05   # 5% of non-compliant visits become deviations [ASSUMED]
-        degradation = 0.3 * per_round_deviation + 0.02 * underreporting_fraction
+        per_round_deviation = dt * deviation_rate * 0.05   # scaled by dt [ASSUMED 5% conversion rate]
+        degradation = 0.3 * per_round_deviation + dt * 0.02 * underreporting_fraction
         recovery_rate = (
             self.BASE_RECOVERY_RATE * (1.0 + self.MONITORING_RECOVERY_RATE)
             if monitoring_active else self.BASE_RECOVERY_RATE
         )
-        recovery = recovery_rate * (1.0 - self.level)
+        recovery = dt * recovery_rate * (1.0 - self.level)  # dt-scaled first-order recovery
         self.level = min(1.0, max(0.0, self.level - degradation + recovery))
 
 

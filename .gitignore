@@ -119,5 +119,5 @@ uploads/
 results/
 simulation_cache/
 
-# System dynamics docs — temporarily tracked; remove when asked
-# docs/system_dynamics/
+# System dynamics docs — local only, never tracked
+docs/system_dynamics/

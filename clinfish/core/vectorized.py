@@ -42,8 +42,8 @@ COL_VISIT_BURDEN    = 4
 COL_STATUS          = 5
 COL_INSTITUTIONAL_TRUST = 6   # slow-updating sponsor trust (information stock)
 COL_TRIAL_FATIGUE       = 7   # accumulating fatigue stock (inflow: visits+AEs, outflow: recovery)
-COL_CONSCIENTIOUSNESS   = 8   # Big Five Conscientiousness trait [GROUNDED: Roberts 2009 meta r=0.19]
-COL_PERSONAL_CONTROL    = 9   # IPQ-R Personal Control subscale [GROUNDED: Hagger & Orbell 2003]
+COL_CONSCIENTIOUSNESS   = 8   # Big Five Conscientiousness trait [GROUNDED: Molloy et al. 2014 Annals Behav Med, r=0.149, N=3476]
+COL_PERSONAL_CONTROL    = 9   # IPQ-R Personal Control subscale [GROUNDED: Brandes & Mullan 2014 Health Psych Rev, r=0.12, 30 CSM studies]
 COL_ADHERENCE_STATE     = 10  # Markov adherence state: 0=holiday, 1=taking [GROUNDED: Vrijens 2008]
 COL_NEUROTICISM         = 11  # Big Five Neuroticism [GROUNDED direction; Beta prior ASSUMED]
 N_COLS = 12
@@ -214,12 +214,14 @@ class PopulationArray:
         if n_enrolled == 0:
             return
         states = self.state[enrolled_mask, COL_ADHERENCE_STATE]
+        # Draw one uniform random per enrolled patient; use the same array for
+        # both transition checks so shapes are always (n_enrolled,).
         rands = rng.random(n_enrolled)
         taking = states == 1.0
-        holiday = states == 0.0
+        holiday = ~taking  # binary state: everything not TAKING is HOLIDAY
         new_states = states.copy()
-        new_states[taking & (rands[taking] < p_taking_to_holiday)] = 0.0
-        new_states[holiday & (rands[holiday] < p_holiday_to_taking)] = 1.0
+        new_states[taking & (rands < p_taking_to_holiday)] = 0.0
+        new_states[holiday & (rands < p_holiday_to_taking)] = 1.0
         self.state[enrolled_mask, COL_ADHERENCE_STATE] = new_states
 
     def update_archetypes(

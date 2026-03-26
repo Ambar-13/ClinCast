@@ -276,6 +276,9 @@ def run_simulation(config: SimConfig) -> TrialOutputs:
     # so late-enrolling patients correctly face the full early-enrollment hazard.
     enrollment_round = np.full(config.n_patients, -1, dtype=np.float32)
 
+    # Store initial beliefs for Friedkin-Johnsen anchoring (prevent consensus collapse)
+    initial_beliefs = pop.beliefs().copy()
+
     # ── Round loop ────────────────────────────────────────────────────────────
     rounds: list[SimulationRound] = []
     injection_index = {ev.round_index: ev for ev in config.injection_events}
@@ -294,7 +297,7 @@ def run_simulation(config: SimConfig) -> TrialOutputs:
         )
 
         # Advance site activation pipeline (DELAY3 — NCI 167-day median)
-        stocks.site_activation.step()
+        stocks.site_activation.step(dt=config.months_per_round)
         # FIX 11 (M13): assert pipeline conservation each round.
         assert stocks.site_activation.conservation_check(), (
             f"site activation pipeline conservation violated at round {r}"
@@ -376,7 +379,7 @@ def run_simulation(config: SimConfig) -> TrialOutputs:
         enrolled_idx = np.where(enrolled_mask)[0]
 
         # 2. Belief propagation (DeGroot)
-        new_beliefs = propagate_beliefs(pop.beliefs(), T, enrolled_mask)
+        new_beliefs = propagate_beliefs(pop.beliefs(), T, enrolled_mask, initial_beliefs=initial_beliefs)
         pop.set_beliefs(new_beliefs)
 
         # 3. Adversarial injection
@@ -418,6 +421,19 @@ def run_simulation(config: SimConfig) -> TrialOutputs:
         pop.state[enrolled_idx, COL_INSTITUTIONAL_TRUST] = np.clip(
             institutional_trust + (dt / tau_arr) * gap, 0.0, 1.0,
         ).astype(np.float32)
+
+        # Update 2-state Markov adherence (TAKING ↔ HOLIDAY)
+        # [GROUNDED structure: Vrijens et al. BMJ 2008; transition probs ASSUMED at monthly scale]
+        pop.update_adherence_states(rng)
+
+        # Update archetype evolution (TREATMENT_NAIVE → EXPERIENCED_ADVOCATE after 12mo)
+        # [ASSUMED: 2%/month transition for veterans with high institutional trust]
+        rounds_since_enrollment = np.where(
+            enrollment_round >= 0,
+            (r - enrollment_round).astype(np.float32),
+            np.float32(0.0),
+        )
+        pop.update_archetypes(rng, rounds_since_enrollment)
 
         # 4. Compute adherence, visit compliance, AE reporting
         adh = adherence_probability(
@@ -484,7 +500,7 @@ def run_simulation(config: SimConfig) -> TrialOutputs:
         ae_frac = float(ae_occurs.mean()) if len(ae_occurs) > 0 else 0.0
         ae_inflow = 0.06 * ae_frac  # [ASSUMED magnitude]
         # Recovery outflow: first-order decay with tau=6mo (Euler: outflow = fatigue/tau per month; half-life ~= 4.2 months)
-        recovery_outflow = fatigue / 6.0
+        recovery_outflow = (dt / 6.0) * fatigue
         pop.state[enrolled_idx, COL_TRIAL_FATIGUE] = np.clip(
             fatigue + visit_inflow + ae_inflow - recovery_outflow, 0.0, 1.0,
         ).astype(np.float32)

@@ -130,13 +130,17 @@ def apply_policy(policy: PolicyConfig) -> dict[str, Any]:
     # [DIRECTIONAL — placebo patients more likely to dropout for efficacy failure; 40% max ASSUMED]
     params["efficacy_dropout_modifier"] = round(1.0 + 0.40 * policy.placebo_ratio, 3)
 
-    # dsmb_oversight: intensive DSMB reviews → lower effective safety signal threshold
-    # [DIRECTIONAL — intensive DSMB reviews more frequent interim analyses; threshold ASSUMED]
-    params["dsmb_sensitivity"] = round(0.3 + 0.5 * policy.dsmb_oversight, 3)
+    # dsmb_oversight: intensive DSMB → LOWER sensitivity threshold (triggers at lower signal level)
+    # dsmb_oversight=0 → threshold=0.70 (minimal oversight, barely triggers)
+    # dsmb_oversight=1 → threshold=0.20 (monthly DSMB, triggers early)
+    # [DIRECTIONAL — direction grounded; linear mapping ASSUMED]
+    params["dsmb_sensitivity"] = round(0.70 - 0.50 * policy.dsmb_oversight, 3)
 
-    # safety_stopping_conservatism: conservative sponsors set higher bars for stopping
-    # [DIRECTIONAL — conservative sponsors set higher bars for stopping; ASSUMED linear mapping]
-    params["safety_stopping_threshold"] = round(0.6 + 0.4 * policy.safety_stopping_conservatism, 3)
+    # safety_stopping_conservatism: conservative sponsors set LOWER safety signal threshold (stop earlier)
+    # conservatism=0 → threshold=1.0 (liberal; wait for clinical hold before stopping)
+    # conservatism=1 → threshold=0.60 (conservative; stop at first clear signal)
+    # [DIRECTIONAL — direction grounded; linear mapping ASSUMED]
+    params["safety_stopping_threshold"] = round(1.0 - 0.40 * policy.safety_stopping_conservatism, 3)
 
     return params
 

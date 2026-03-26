@@ -24,7 +24,7 @@ Family support → adherence:
   Family functioning explains variance in adherence: overall r = 0.18
   (95% CI 0.15–0.20; n = 8,531 participants, k = 52 studies).
   Family conflict: r = −0.18 (95% CI −0.21 to −0.15).
-  Source: Molloy GJ et al., Health Psychology Review, meta-analysis, 2018
+  Source: Molloy GJ et al., Health Psychology Review, meta-analysis, 2014
   (PMC7967873).
 
 Geographic access:
@@ -145,7 +145,7 @@ class PatientArchetype:
     # Bogg & Roberts (2004) Psychological Bulletin meta-analysis (n=194 studies):
     # Neuroticism shows r≈-0.09 to -0.15 with health behaviors.
     # Direction is GROUNDED; weaker than Conscientiousness.
-    # M18 FIX: West Sweden coefficient source — Axelsson et al. (2013) West Sweden
+    # M18 FIX: West Sweden coefficient source — Axelsson et al. (2011) West Sweden
     # Study (PMC3065484) — COPD inhalation adherence context. Applied cross-TA:
     # [DIRECTIONAL — direction consistent across contexts; magnitude may differ in
     #  non-pulmonary populations]
@@ -204,7 +204,7 @@ ARCHETYPES: dict[ArchetypeID, PatientArchetype] = {
         name="caregiver_dependent_elderly",
         archetype_id=ArchetypeID.CAREGIVER_DEPENDENT_ELDERLY,
         # Beliefs highly influenced by caregiver (family support r = 0.18,
-        # Molloy et al. 2018). Caregiver becomes the de-facto network node.
+        # Molloy et al. (2014)). Caregiver becomes the de-facto network node.
         stubbornness=0.70,
         # AD Phase 3 mean dropout 21.2% ± 10.8% at 1.4 years; older age
         # OR = 1.06 per year.

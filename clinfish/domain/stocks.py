@@ -271,17 +271,19 @@ class SiteActivationPipeline:
         self.ready = 0.0
         self.active = 0.0
 
-    def step(self) -> None:
-        """Advance one month. Sites flow through pipeline via first-order delays.
+    def step(self, dt: float = 1.0) -> None:
+        """Advance one simulation step of length dt months.
 
-        DELAY3: each stage flow = stock / tau_per_stage.
+        DELAY3: each stage flow = (dt / tau_per_stage) * stock.
         Flow from contracting → IRB → ready → active.
         No outflow from active (sites stay active once opened).
+        Adding dt parameter ensures pipeline advances correctly when
+        months_per_round != 1.0.
         """
-        # Calculate outflows (continuous approximation: Euler step dt=1 month)
-        flow_to_irb    = self.in_contracting / self.tau_per_stage
-        flow_to_ready  = self.in_irb / self.tau_per_stage
-        flow_to_active = self.ready / self.tau_per_stage
+        # Calculate outflows scaled by dt (Euler step)
+        flow_to_irb    = (dt / self.tau_per_stage) * self.in_contracting
+        flow_to_ready  = (dt / self.tau_per_stage) * self.in_irb
+        flow_to_active = (dt / self.tau_per_stage) * self.ready
 
         # Update stocks (conservation: total = contracting + irb + ready + active)
         self.in_contracting = max(0.0, self.in_contracting - flow_to_irb)

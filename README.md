@@ -372,3 +372,7 @@ The behavioral model is grounded in the following literature. Citations are repe
 ## License
 
 Apache 2.0. See [LICENSE](LICENSE).
+
+---
+
+<p align="center">© 2026 Ambar</p>

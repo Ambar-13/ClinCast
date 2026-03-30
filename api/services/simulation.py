@@ -121,7 +121,7 @@ def _collect_warnings(result: TrialOutputs) -> list[str]:
     final = rounds[-1]
     if final.n_completed / max(result.n_patients, 1) < 0.30:
         warnings.append(
-            f"Low completion rate: {100*final.n_completed/result.n_patients:.1f}% completed"
+            f"Low completion rate: {100*final.n_completed/max(result.n_patients,1):.1f}% completed"
         )
     if final.data_quality < 0.50:
         warnings.append(f"Data quality critically low: {final.data_quality:.2f}")

@@ -7,6 +7,8 @@ from pydantic import BaseModel, ConfigDict
 
 
 class RoundSnapshot(BaseModel):
+    model_config = ConfigDict(extra="ignore")  # tolerate future SimulationRound fields
+
     round_index:           int
     time_months:           float
     n_enrolled:            int
